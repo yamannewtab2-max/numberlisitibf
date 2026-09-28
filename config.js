@@ -20,9 +20,9 @@
 //   }
 window.APP_CONFIG = {
   firebase: {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    appId: ""
+    apiKey: "AIzaSyCZnj-YaoAI4TRIpa8uuSmefQDZWY450XE",
+    authDomain: "numberlisting-22048.firebaseapp.com",
+    projectId: "numberlisting-22048",
+    appId: "1:677833840240:web:b57df58776950cc33f46b5"
   }
 };

@@ -395,7 +395,7 @@ function waSend(id){
 var cloud = (function(){
   var CFG = (window.APP_CONFIG && window.APP_CONFIG.firebase) || {};
   var on = !!(CFG.apiKey && CFG.projectId && String(CFG.apiKey).indexOf('AIza') === 0);
-  var BASE = on ? ('https://firestore.googleapis.com/v1/projects/' + CFG.projectId + '/databases/(default)/documents') : '';
+  var BASE = on ? ('https://firestore.googleapis.com/v1/projects/' + CFG.projectId + '/databases/(default)/documents?key=' + encodeURIComponent(CFG.apiKey)) : '';
   var AUTHKEY = 'leads.auth';
   var auth = null, inflight = null;
   try{ auth = JSON.parse(localStorage.getItem(AUTHKEY)); }catch(e){ auth = null; }
@@ -427,13 +427,23 @@ var cloud = (function(){
     inflight.then(function(){ inflight = null; }, function(){ inflight = null; });
     return inflight;
   }
+  function raw(path, opts, token){
+    var h = { 'content-type':'application/json' };
+    if(token) h.authorization = 'Bearer ' + token;
+    return fetch(BASE + path, { method:opts.method || 'GET', headers:h, body:opts.body }).then(function(r){
+      if(r.status === 401 || r.status === 403) return { denied:true };   // rules (or identity) said no
+      if(!r.ok) throw new Error('http ' + r.status);
+      return r.json().catch(function(){ return {}; });
+    });
+  }
+  // Try the plain API key first (works when the rules are open); if Firestore refuses,
+  // sign in anonymously and retry with the token.
   function api(path, opts){
     opts = opts || {};
-    return authenticate().then(function(t){
-      var h = { 'content-type':'application/json', 'authorization':'Bearer ' + t };
-      Object.keys(opts.headers || {}).forEach(function(k){ h[k] = opts.headers[k]; });
-      return fetch(BASE + path, { method:opts.method || 'GET', headers:h, body:opts.body })
-        .then(function(r){ if(!r.ok) throw new Error('http ' + r.status); return r.json().catch(function(){ return {}; }); });
+    return raw(path, opts).then(function(res){
+      if(!res.denied) return res;
+      return authenticate().then(function(t){ return raw(path, opts, t); })
+        .then(function(r2){ if(r2.denied) throw new Error('denied'); return r2; });
     });
   }
 
@@ -472,6 +482,7 @@ var cloud = (function(){
       if(!on) return;
       api('/' + col + '/' + id, { method:'DELETE' }).catch(function(){});
     },
+    status: function(){ return api('/categories').then(function(){ return 'ok'; }, function(e){ return 'fail: ' + e.message; }); },
     pull: function(){
       if(!on) return Promise.resolve(false);
       var cats = {}, biz = {}, order = [];
