@@ -15,6 +15,7 @@
 // Places API has a daily cap, so a sweep run is deliberately small - "More" does the next run.
 
 const discover = require('./discover.js');
+const here = require('./here.js');
 
 const MODEL = 'gemini-3.1-flash-lite';
 const GEMINI = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
@@ -207,6 +208,36 @@ module.exports = async (req, res) => {
     }
 
 
+    // ---- HERE fallback: only when Google could not be used (quota / key / nothing returned) ----
+    let hereUsed = 0;
+    if (!googleDown && used === 0) googleDown = true;      // Google answered but gave nothing at all
+    if (googleDown) {
+      const hkey = process.env.HERE_API_KEY || String(P.hereKey || '');
+      if (!hkey) {
+        return res.status(429).json({ error: 'Google quota reached and HERE_API_KEY is not set', quota: true, areas: searched });
+      }
+      let c = center;
+      try {
+        if (!isFinite(c.lat) || !isFinite(c.lng)) c = (await here.geocode(area || q, hkey)) || c;
+      } catch (e) { /* keep going: a HERE search without a centre is impossible */ }
+      if (isFinite(c.lat) && isFinite(c.lng)) {
+        const words = discover.expandQueries ? discover.expandQueries(q) : [q];
+        try {
+          const out = await here.findByKeyword(q, c, AREA_RADIUS, words, hkey);
+          used += out.calls;
+          for (const it of out.items) {
+            if (seenPhones.has(it.phone)) continue;
+            seenPhones.add(it.phone);
+            items.push(it);
+            hereUsed++;
+          }
+          if (searched.length === 0) searched.push('HERE ' + shortArea(c.label || area || q));
+        } catch (e) {
+          if (!items.length) return res.status(502).json({ error: 'HERE: ' + String((e && e.message) || e) });
+        }
+      }
+    }
+
     const saved = await writeMemory(project, fbKey, mem);
     items.sort((a, b) => a.km - b.km);
     const numbers = Math.min(items.length, max);
@@ -221,6 +252,7 @@ module.exports = async (req, res) => {
       areas: searched,
       calls: used,
       googleDown: googleDown,
+      here: hereUsed,
       remembered: saved,
       more: more,
       done: Object.keys(mem.done).length,

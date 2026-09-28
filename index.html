@@ -1056,6 +1056,7 @@ function startFind(fresh){
     F.withSite = (F.withSite || 0) + (j.withSite || 0); // skipped: they already have a website
     F.again = (F.again || 0) + (j.again || 0);          // places this app had already scanned
     F.googleDown = !!j.googleDown;                      // Google's daily quota is spent
+    F.here = (F.here || 0) + (j.here || 0);             // numbers that came from the HERE fallback
     F.areas = (F.areas || []).concat(j.areas || []);
     F.more = !!j.more;
     renderHits();
@@ -1068,6 +1069,7 @@ function renderHits(){
     ((F.areas && F.areas.length) ? (' · ' + F.areas.join(', ')) : '') +
     (F.withSite ? (' · ' + F.withSite + ' with website') : '') +
     (F.again ? (' · ' + F.again + ' scanned before') : '') +
+    (F.here ? (' · ' + F.here + ' via HERE') : '') +
     (F.googleDown ? ' · Google quota out' : '') +
     (skipped > 0 ? (' · ' + skipped + ' no number') : '');
   box.innerHTML = F.items.map(function(h, i){

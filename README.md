@@ -96,6 +96,21 @@ Aturan Firestore harus mengizinkan koleksi `scans` (tempat memori pemindaian dis
 match /scans/{doc} { allow read, write: if true; }
 ```
 
+
+### Kalau Google tidak bisa dipakai → HERE
+
+Google selalu dicoba lebih dulu. Hanya kalau Google tidak bisa dipakai (kuota harian habis atau
+API-nya bermasalah), pencarian otomatis pindah ke **HERE** (`discover.search.hereapi.com`) dengan
+aturan yang sama: beberapa kata kunci sekaligus, hanya nomor HP Indonesia, dan hanya usaha yang
+belum punya website. Baris hasil menuliskan `N via HERE` supaya jelas dari mana angkanya datang.
+
+HERE gratis 1.000 permintaan per hari — inilah yang membuat pencarian tetap jalan di hari kuota
+Google habis.
+
+```
+HERE_API_KEY = <kunci dari platform.here.com>
+```
+
 ## Pesan AI
 
 `api/message.js` memanggil Gemini 3.1 Flash-Lite dengan prompt pendek dan mengembalikan

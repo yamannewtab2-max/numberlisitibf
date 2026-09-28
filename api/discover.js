@@ -298,3 +298,5 @@ module.exports = async function handler(req, res) {
     return res.status(502).json({ error: String(e.message || e) });
   }
 };
+
+module.exports.expandQueries = expandQueries;   // the sweep reuses these words for HERE
