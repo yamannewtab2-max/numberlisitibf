@@ -163,13 +163,15 @@ module.exports = async function handler(req, res) {
     if (used >= MAX_CALLS && nextTile < tiles.length) more = true;
 
     items.sort(function (a, b) { return a.km - b.km; });
+    const found = items.length;                     // callable numbers seen while walking
+    if (found > max) items.length = max;            // ... and what is handed back (the cap)
     const numbers = items.length;
-    if (numbers > max) items.length = max;
 
     return res.status(200).json({
       center: { lat: lat, lng: lng, label: label },
       items: items,
       numbers: numbers,
+      found: found,
       scanned: scanned,
       landline: landline,
       none: none,
