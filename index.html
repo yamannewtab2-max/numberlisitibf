@@ -45,6 +45,7 @@ h1{font-size:20px;font-weight:640;margin:0;letter-spacing:-.02em}
 
 /* list rows */
 .list{display:flex;flex-direction:column;gap:10px;margin-top:70px}
+.list.still .row{animation:none}      /* background sync: update in place, no re-entry animation */
 .view#cat .list{margin-top:6px}
 .row{background:var(--card);border-radius:var(--r);display:flex;align-items:center;gap:12px;
   padding:16px 16px;animation:row .34s var(--ease) both;transition:transform .14s var(--ease),background .18s ease}
@@ -167,6 +168,7 @@ var TRASH = '__trash';   // pseudo-category for numbers already messaged
 var MSG_VERSION = 2;     // raise this whenever the prompt changes -> stored messages get rewritten
 var S = load();
 var cur = null;          // open category id
+var lastSig = '';        // last rendered state, so a background sync only redraws on real change
 var backAnim = false;
 
 function blank(){ return { cats:{}, biz:{}, order:[] }; }
@@ -217,6 +219,14 @@ function show(id, back){
     if(v.id === id){ void v.offsetWidth; v.classList.add('on'); if(back) v.classList.add('back'); }
   }
 }
+function releaseRows(){
+  // Safety net: rows animate in, but must never depend on the animation to become visible
+  // (a page rendered while hidden can leave them at opacity 0).
+  setTimeout(function(){
+    var rs = document.querySelectorAll('.row');
+    for(var i = 0; i < rs.length; i++) rs[i].style.animation = 'none';
+  }, 450);
+}
 function renderHome(){
   var rows = S.order.map(function(id){ return S.cats[id]; }).filter(Boolean);
   var html = rows.length ? rows.map(function(c,i){
@@ -234,6 +244,7 @@ function renderHome(){
       '<span class="cnt num">'+(t||'')+'</span>'+
     '</div>';
   document.getElementById('cats').innerHTML = html;
+  releaseRows();
 }
 function trashCount(){ return Object.keys(S.biz).filter(function(b){ return !!(S.biz[b] && S.biz[b].movedAt); }).length; }
 function bizRow(b, i){
@@ -251,6 +262,7 @@ function renderBiz(){
     .map(function(b){ return S.biz[b]; })
     .sort(function(a,b){ return (b.createdAt||0) - (a.createdAt||0); });
   document.getElementById('biz').innerHTML = rows.length ? rows.map(bizRow).join('') : '<div class="empty">Empty</div>';
+  releaseRows();
 }
 function renderTrash(){
   document.getElementById('catName').textContent = 'Trash';
@@ -259,10 +271,16 @@ function renderTrash(){
     .map(function(b){ return S.biz[b]; })
     .sort(function(a,b){ return (b.movedAt||0) - (a.movedAt||0); });
   document.getElementById('biz').innerHTML = rows.length ? rows.map(bizRow).join('') : '<div class="empty">Empty</div>';
+  releaseRows();
 }
-function rerender(){
+function rerender(quiet){
+  var sig = JSON.stringify(S);
+  if(quiet && sig === lastSig) return;        // nothing changed: don't touch the DOM at all
+  var lists = [document.getElementById('cats'), document.getElementById('biz')];
+  for(var k = 0; k < lists.length; k++) lists[k].classList.toggle('still', !!quiet);
   if(cur === TRASH) renderTrash(); else if(cur) renderBiz();
   renderHome();
+  lastSig = JSON.stringify(S);
 }
 
 /* ---------- sheet ---------- */
@@ -358,6 +376,13 @@ function bizSheet(id, categoryId){
   function go(){
     var name = clean(nameEl.value), phone = clean(phEl.value);
     if(!name && !phone) return;
+    if(phone && !validPhone(phone)){
+      phEl.classList.add('err');
+      setTimeout(function(){ phEl.classList.remove('err'); }, 900);
+      buzz(24);
+      toast('Start with 08 / 8');
+      return;
+    }
     var dup = phone ? findDup(phone, b ? b.id : null) : null;
     if(dup){
       phEl.classList.add('err');
@@ -417,6 +442,14 @@ function findDup(phone, exceptId){
   return null;
 }
 function catNameOf(id){ return (S.cats[id] && S.cats[id].name) || 'another category'; }
+// Indonesian mobile numbers only: 08… / 8… / +62 8…  (landlines such as 021… are refused)
+function validPhone(raw){
+  var d = String(raw || '').replace(/\D/g, '');
+  if(d.indexOf('620') === 0) d = '62' + d.slice(3);
+  if(d.indexOf('62') === 0) d = d.slice(2);
+  else if(d.charAt(0) === '0') d = d.slice(1);
+  return /^8\d{8,11}$/.test(d);
+}
 // Boot repair: strip invisible marks that came with a Google Maps copy-paste, and collapse
 // duplicate numbers - the oldest entry wins. Both are written back to the cloud.
 function tidy(){
@@ -466,32 +499,35 @@ function genMessage(b){
     headers:{'content-type':'application/json'},
     body:JSON.stringify({ name:b.name, category:catNameOf(b.categoryId) })
   }).then(function(r){ return r.json(); }).then(function(j){
-    // only a real AI message is worth storing - a template reply means Gemini was down,
-    // so leave it unset and let the backlog try again later
+    // Only a real AI message is worth storing. A template reply means the models were
+    // unavailable (or rate-limited) - leave it unset so the backlog retries later.
     if(j && typeof j.message === 'string' && j.message.trim() && j.source !== 'template'){
       b.msg = j.message.trim();
       b.msgv = MSG_VERSION;
       save(); cloud.push('businesses', b);
+    }else if(j && j.reason === 'rate-limited'){
+      genPausedUntil = Date.now() + 60000;    // back off instead of burning the quota
     }
   }).catch(function(){});          // offline: filled in by the backlog pass later
 }
-// Anything stored before (or added while offline) gets its message written in the background,
-// a few at a time so it never competes with a tap.
+var genPausedUntil = 0;
+// Anything still without a message gets one written in the background, a few at a time so it
+// never competes with a tap and stays under the model's rate limit.
 var genRunning = false;
 function genBacklog(max){
-  if(genRunning || !navigator.onLine) return;
+  if(genRunning || !navigator.onLine || Date.now() < genPausedUntil) return;
   var ids = Object.keys(S.biz).filter(function(i){
     var b = S.biz[i];
     return b && b.name && (!b.msg || b.msgv !== MSG_VERSION);
   });
   if(!ids.length) return;
   genRunning = true;
-  var i = 0, stop = Math.min(ids.length, max || 3);
+  var i = 0, stop = Math.min(ids.length, max || 5);
   (function step(){
     if(i >= stop){ genRunning = false; return; }
     var b = S.biz[ids[i++]];
     if(!b){ step(); return; }
-    genMessage(b).then(function(){ setTimeout(step, 300); });
+    genMessage(b).then(function(){ setTimeout(step, 400); });
   })();
 }
 
@@ -779,7 +815,7 @@ document.getElementById('fab').addEventListener('click', function(){
 });
 
 document.addEventListener('visibilitychange', function(){
-  if(!document.hidden && cur) rerender();
+  if(!document.hidden && cur) rerender(true);
 });
 
 /* copy */
@@ -816,8 +852,8 @@ function syncNow(force){
     .then(function(){ return cloud.pull(); })
     .then(function(pulled){
       syncing = false;
-      if(pulled){ tidy(); rerender(); }
-      genBacklog(3);                 // keep filling in any messages still missing
+      if(pulled){ tidy(); rerender(true); }
+      genBacklog(5);                 // keep filling in any messages still missing
     }, function(){ syncing = false; });
 }
 function syncSoon(){ clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 500); }
@@ -829,7 +865,7 @@ setTimeout(function(){ syncNow(true); }, 2500);   // first sync right after boot
 window.__sync = { now:syncNow, soon:syncSoon, syncing:function(){ return syncing; } };
 
 /* small debug handle */
-window.leads = { get state(){ return S; }, refresh:function(){ S = load(); renderHome(); }, waUrl:waUrl, normPhone:normPhone, template:template, cloud:cloud, tidy:tidy, rerender:rerender };
+window.leads = { get state(){ return S; }, refresh:function(){ S = load(); renderHome(); }, waUrl:waUrl, normPhone:normPhone, validPhone:validPhone, template:template, cloud:cloud, tidy:tidy, rerender:rerender, genBacklog:genBacklog };
 })();
 </script>
 </body>

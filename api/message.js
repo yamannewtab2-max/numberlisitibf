@@ -90,11 +90,12 @@ module.exports = async (req, res) => {
 
   const key = process.env.GEMINI_API_KEY;
   if (!key) {
-    res.status(200).json({ ok: true, source: 'template', message: fallback(name, category) });
+    res.status(200).json({ ok: true, source: 'template', reason: 'no-key', message: fallback(name, category) });
     return;
   }
 
   const prompt = PROMPT.replace('{NAME}', name || '-').replace('{CATEGORY}', category || '-');
+  let reason = 'unavailable';
 
   for (const model of MODELS) {
     try {
@@ -115,6 +116,9 @@ module.exports = async (req, res) => {
       });
       clearTimeout(timer);
 
+      if (r.status === 429) { reason = 'rate-limited'; console.error('gemini 429', model); continue; }
+      if (r.status === 404) { reason = 'retired'; continue; }
+
       const j = await r.json();
       const parts = (((j.candidates || [])[0] || {}).content || {}).parts || [];
       let text = parts.map((p) => p.text || '').join('').trim();
@@ -125,8 +129,9 @@ module.exports = async (req, res) => {
       res.status(200).json({ ok: true, source: 'gemini', model, message: text });
       return;
     } catch (e) {
+      reason = 'error';
       console.error('gemini failed', model, e && e.message);   // try the next model
     }
   }
-  res.status(200).json({ ok: true, source: 'template', message: fallback(name, category) });
+  res.status(200).json({ ok: true, source: 'template', reason, message: fallback(name, category) });
 };
