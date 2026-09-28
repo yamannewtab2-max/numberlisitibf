@@ -25,23 +25,27 @@ UI sengaja tanpa teks tambahan. Tidak ada login, catatan, peta, CRM, atau dashbo
 ### Mengaktifkan Firebase
 
 1. Firebase console → **Firestore Database** → Create database.
-2. Project settings → Your apps → **Web** → copy `firebaseConfig`.
-3. Tempel ke `config.js`.
-4. Aturan Firestore (tanpa login, satu dataset bersama):
+2. **Authentication → Sign-in method → Anonymous → Enable** (app login sendiri, tanpa layar login).
+3. Project settings → Your apps → **Web** → copy `firebaseConfig` → tempel ke `config.js`.
+4. Aturan Firestore:
 
 ```
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /categories/{doc} { allow read, write: if true; }
-    match /businesses/{doc} { allow read, write: if true; }
+    match /categories/{doc} { allow read, write: if request.auth != null; }
+    match /businesses/{doc} { allow read, write: if request.auth != null; }
   }
 }
 ```
 
 Koleksinya cuma dua: `categories` (id, name, createdAt) dan
-`businesses` (id, name, phone, categoryId, createdAt). Dengan aturan terbuka, siapa pun
-yang tahu project ID bisa membaca/menulis — jangan simpan data sensitif di sini.
+`businesses` (id, name, phone, categoryId, createdAt).
+
+Catatan: Firestore REST menolak API key tanpa identitas, karena itu app melakukan
+anonymous sign-in sekali per perangkat. Artinya tiap perangkat punya uid sendiri —
+pakai satu HP sebagai sumber data utama, atau pakai aturan `if true` kalau mau satu
+dataset bersama (siapa pun yang tahu project ID bisa membacanya).
 
 ## Pesan AI
 
