@@ -754,8 +754,9 @@ cloud.pull().then(function(pulled){ if(pulled){ tidy(); rerender(); } cloud.flus
 
 /* keep every device on the cloud's version - the cloud is the truth, the phone is a cache */
 var syncing = false, syncTimer = null;
-function syncNow(){
-  if(!cloud.on() || syncing || sheetOpen || document.hidden) return;
+function syncNow(force){
+  if(!cloud.on() || syncing || sheetOpen) return;
+  if(document.hidden && !force) return;      // no background polling
   syncing = true;
   Promise.resolve(cloud.flush())
     .then(function(){ return cloud.pull(); })
@@ -768,7 +769,8 @@ function syncSoon(){ clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 50
 setInterval(syncNow, 20000);                                             // while the app is open
 document.addEventListener('visibilitychange', function(){ if(!document.hidden) syncSoon(); });
 window.addEventListener('focus', syncSoon);
-window.addEventListener('online', function(){ cloud.flush(); syncSoon(); });
+window.addEventListener("online", function(){ cloud.flush(); syncSoon(); });
+setTimeout(function(){ syncNow(true); }, 2500);   // first sync right after boot
 window.__sync = { now:syncNow, soon:syncSoon, syncing:function(){ return syncing; } };
 
 /* small debug handle */
