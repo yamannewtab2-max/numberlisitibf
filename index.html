@@ -475,18 +475,46 @@ var cloud = (function(){
     return '/' + col + '/' + id + '?' + fields.map(function(f){ return 'updateMask.fieldPaths=' + f; }).join('&');
   }
 
+  // Every change is queued on the device first and flushed to Firestore in order, so a
+  // lead collected with no signal is not lost - it goes up on the next connection.
+  var QKEY = 'leads.queue';
+  function qget(){ try{ return JSON.parse(localStorage.getItem(QKEY)) || []; }catch(e){ return []; } }
+  function qset(a){ try{ localStorage.setItem(QKEY, JSON.stringify(a)); }catch(e){} }
+  var flushing = false;
+
+  function enqueue(op){
+    if(!on) return;
+    var a = qget(); a.push(op); qset(a); flush();
+  }
+  function flush(){
+    if(!on || flushing) return Promise.resolve();
+    var a = qget();
+    if(!a.length) return Promise.resolve();
+    flushing = true;
+    var op = a[0];
+    var p = op.del
+      ? api('/' + op.col + '/' + op.id, { method:'DELETE' })
+      : api(nameOf(op.col, op.id), { method:'PATCH', body:JSON.stringify(enc(op.doc)) });
+    return Promise.resolve(p).then(function(){
+      var cur = qget(); cur.shift(); qset(cur); flushing = false; return flush();
+    }, function(){
+      flushing = false;      // still queued - retried on the next boot or reconnect
+    });
+  }
+  window.addEventListener('online', function(){ flush(); });
+
   return {
     on: function(){ return on; },
+    queue: function(){ return qget().length; },
+    flush: flush,
     push: function(col, obj){
-      if(!on) return;
       var doc = (col === 'categories')
         ? { id:obj.id, name:obj.name, createdAt:obj.createdAt }
         : { id:obj.id, name:obj.name, phone:obj.phone, categoryId:obj.categoryId, createdAt:obj.createdAt };
-      api(nameOf(col, obj.id), { method:'PATCH', body:JSON.stringify(enc(doc)) }).catch(function(){});
+      enqueue({ col:col, id:obj.id, doc:doc });
     },
     drop: function(col, id){
-      if(!on) return;
-      api('/' + col + '/' + id, { method:'DELETE' }).catch(function(){});
+      enqueue({ col:col, id:id, del:true });
     },
     status: function(){ return api('/categories').then(function(){ return 'ok'; }, function(e){ return 'fail: ' + e.message; }); },
     pull: function(){
@@ -497,6 +525,18 @@ var cloud = (function(){
         return api('/businesses');
       }).then(function(k){
         (k.documents || []).forEach(function(d){ var b = dec(d); b.id = idOf(d.name); biz[b.id] = b; });
+        // Keep anything still waiting in the outbox (collected offline) visible, and keep
+        // a queued delete from being resurrected by the server copy.
+        qget().forEach(function(op){
+          if(op.del){
+            if(op.col === 'categories'){ delete cats[op.id]; order = order.filter(function(x){ return x !== op.id; }); }
+            else delete biz[op.id];
+            return;
+          }
+          if(!op.doc) return;
+          if(op.col === 'categories'){ if(!cats[op.id]) order.push(op.id); cats[op.id] = op.doc; }
+          else biz[op.id] = op.doc;
+        });
         if(order.length || Object.keys(biz).length){
           order.sort(function(a, b){ return (cats[a].createdAt || 0) - (cats[b].createdAt || 0); });
           S = { cats:cats, biz:biz, order:order };
@@ -602,7 +642,7 @@ function legacy(text, done){
 
 /* boot */
 renderHome();
-cloud.pull().then(function(pulled){ if(pulled) renderHome(); });
+cloud.pull().then(function(pulled){ if(pulled) renderHome(); cloud.flush(); });
 
 /* small debug handle */
 window.leads = { state:S, refresh:function(){ S = load(); renderHome(); }, waUrl:waUrl, normPhone:normPhone, template:template, cloud:cloud };
