@@ -546,12 +546,13 @@ function moveToTrash(b){
 function waSend(id){
   var b = S.biz[id]; if(!b) return;
   buzz(10);
-  // Instant path: the message was written when the number was added.
-  if(b.msg){
+  // Instant path: the message was written when the number was added (and is up to date).
+  if(b.msg && b.msgv === MSG_VERSION){
     moveToTrash(b);
     location.href = waUrl(b.phone, b.msg);
     return;
   }
+  // Outdated or missing text: write it now, once, then every later tap is instant.
   var c = S.cats[b.categoryId];
   var category = c ? c.name : '';
   var btn = sheetEl.querySelector ? document.querySelector('[data-wa="'+id+'"]') : null;
