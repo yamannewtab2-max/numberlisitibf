@@ -68,7 +68,14 @@ area itu dan mengembalikan usaha yang punya nomor.
 - Tombol **＋** di baris hasil menyimpan nomor itu. Dari halaman kategori, nomor masuk ke
   kategori itu; dari Home, muncul pilihan kategori (atau kategori baru bernama kata kuncinya).
 - Nomor yang sudah pernah disimpan ditandai ✓ dan tidak bisa masuk dua kali.
-- **More** mengambil 100 hasil berikutnya.
+- Satu pencarian mengumpulkan **50 nomor** (bukan 100 tempat mentah): `api/discover.js` menyapu
+  area itu sampai 50 nomor HP terkumpul atau area habis, lalu hanya menampilkan yang bisa di-WhatsApp.
+  Baris atas menunjukkan hasilnya: `50 numbers · 200 places · 150 no number`.
+- **More** melanjutkan area berikutnya (50 nomor lagi). HERE hanya mengembalikan 100 tempat per
+  permintaan dan `offset` tidak bisa lewat dari itu, jadi area ditutup dengan beberapa lingkaran
+  tumpang-tindih (tengah dulu, lalu cincin di sekelilingnya) — maksimal 8 permintaan per pencarian
+  dari kuota gratis 1.000/hari.
+- Kata kunci otomatis terisi dari nama kategori yang sedang dibuka.
 
 Kunci HERE hanya ada di server. Setel di Vercel:
 

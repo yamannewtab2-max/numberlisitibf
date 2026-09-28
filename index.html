@@ -909,9 +909,11 @@ function findSheet(){
   var radii = [1000,3000,5000,10000].map(function(r){
     return '<button class="chip'+(r === F.r ? ' on' : '')+'" data-r="'+r+'">'+(r/1000)+' km</button>';
   }).join('');
+  // Opened from a category, that category names what to look for; from Home the last keyword stays.
+  var pre = (cur && cur !== TRASH && S.cats[cur]) ? S.cats[cur].name : F.q;
   openSheet('<div class="sh-title">Find numbers</div>'+
     '<input class="sh-input" id="fArea" placeholder="Area" autocomplete="off" enterkeyhint="next" value="'+esc(F.area)+'">'+
-    '<input class="sh-input" id="fQ" placeholder="What" autocomplete="off" enterkeyhint="done" value="'+esc(F.q)+'">'+
+    '<input class="sh-input" id="fQ" placeholder="What" autocomplete="off" enterkeyhint="done" value="'+esc(pre)+'">'+
     '<div class="chips">'+radii+'</div>'+
     '<button class="sh-btn" id="fGo">Search</button>', true);
   var areaEl = document.getElementById('fArea'), qEl = document.getElementById('fQ');
@@ -948,43 +950,40 @@ function openFind(){
   try{ history.pushState({ v:'find' }, ''); }catch(e){}
   startFind(true);
 }
+var FIND_MAX = 50;            // numbers per search, walked until this many or the area runs out
 function startFind(fresh){
   if(F.busy) return;
   F.busy = true;
-  if(fresh){ F.items = []; F.more = false; }
+  if(fresh){ F.items = []; F.more = false; F.next = 0; F.scanned = 0; }
   var sub = document.getElementById('findSub');
   document.getElementById('findMore').classList.add('hide');
   var url = '/api/discover?q=' + encodeURIComponent(F.q) + '&area=' + encodeURIComponent(F.area) +
-            '&r=' + F.r + '&offset=' + F.items.length +
+            '&r=' + F.r + '&tile=' + (F.next || 0) + '&max=' + FIND_MAX +
             (F.lat != null ? ('&lat=' + F.lat + '&lng=' + F.lng) : '');
   fetch(url).then(function(r){ return r.json(); }).then(function(j){
     F.busy = false;
     if(!j || j.error){ sub.textContent = (j && j.error) ? j.error : 'Search failed'; return; }
     F.lat = j.center.lat; F.lng = j.center.lng; F.label = j.center.label; saveFind();
     F.items = F.items.concat(j.items || []);
+    F.scanned = (F.scanned || 0) + (j.scanned || 0);   // places looked at, numbers or not
+    F.next = j.nextTile || 0;              // HERE caps a query at 100 places; the next tile continues
     F.more = !!j.more;
     renderHits();
   }, function(){ F.busy = false; sub.textContent = 'No connection'; });
 }
 function renderHits(){
   var box = document.getElementById('hits'), sub = document.getElementById('findSub');
-  var order = F.items.map(function(h, i){ return i; }).sort(function(a, b){
-    var pa = F.items[a].phone ? 0 : 1, pb = F.items[b].phone ? 0 : 1;
-    return pa - pb || (F.items[a].km - F.items[b].km);
-  });
-  var nums = F.items.filter(function(h){ return h.phone; }).length;
-  sub.textContent = nums + ' numbers · ' + F.items.length + ' places' + (F.label ? (' · ' + F.label) : '');
-  box.innerHTML = order.map(function(i){
-    var h = F.items[i];
-    var dup = h.phone ? findDup(h.phone, null) : null;
-    var line = h.phone ? (h.phone + (h.km ? (' · ' + h.km + ' km') : ''))
-                       : (h.landline ? 'landline' : 'no number');
-    return '<div class="row'+(h.phone ? '' : ' dim')+'">'+
+  var skipped = (F.scanned || 0) - F.items.length;
+  sub.textContent = F.items.length + ' numbers · ' + (F.scanned || F.items.length) + ' places' +
+    (F.label ? (' · ' + F.label) : '') + (skipped > 0 ? (' · ' + skipped + ' no number') : '');
+  box.innerHTML = F.items.map(function(h, i){
+    var dup = findDup(h.phone, null);
+    return '<div class="row">'+
       '<span class="grow"><span class="bname'+(isRTL(h.name) ? ' rtl' : '')+'">'+esc(h.name)+'</span>'+
-      '<span class="bphone num">'+esc(line)+'</span></span>'+
-      (h.phone ? '<button class="ico add'+(dup ? ' done' : '')+'" data-add="'+i+'" aria-label="Save">'+(dup ? I.check : I.plus)+'</button>' : '')+
+      '<span class="bphone num">'+esc(h.phone + (h.km ? (' · ' + h.km + ' km') : ''))+'</span></span>'+
+      '<button class="ico add'+(dup ? ' done' : '')+'" data-add="'+i+'" aria-label="Save">'+(dup ? I.check : I.plus)+'</button>'+
     '</div>';
-  }).join('') || '<div class="empty">Nothing found</div>';
+  }).join('') || '<div class="empty">No numbers here</div>';
   document.getElementById('findMore').classList.toggle('hide', !F.more);
   releaseRows();
 }
