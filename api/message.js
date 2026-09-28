@@ -14,15 +14,15 @@ const endpointFor = (m) => `https://generativelanguage.googleapis.com/v1beta/mod
 const LIMITS = { name: 80, category: 40 };
 
 const FALLBACK = [
-  [/villa|vila|guest ?house|penginapan|homestay/i, 'villa', 'foto kamar, fasilitas, harga per malam, lokasi, dan tombol pemesanan langsung'],
+  [/villa|vila|guest ?house|penginapan|homestay/i, 'villa', 'foto kamar, fasilitas, harga per malam, lokasi, dan cara pesan langsung'],
   [/resto|restaurant|rumah makan|warung|cafe|kafe|kedai|bakery/i, 'restoran', 'daftar menu dan harga, foto makanan, jam buka, lokasi, dan pesanan lewat WhatsApp'],
-  [/barber|cukur|salon|potong|spa/i, 'barbershop', 'daftar layanan dan harga, galeri hasil potongan, jam buka, dan booking tanpa antre'],
-  [/hotel|resort|losmen|motel|inn/i, 'hotel', 'tipe kamar dan fasilitas, harga, lokasi, dan booking langsung'],
-  [/shop|toko|store|butik|grosir|distro|bangunan|material/i, 'toko', 'katalog produk, harga, order lewat WhatsApp, dan lokasi toko'],
+  [/barber|cukur|salon|potong|spa/i, 'barbershop', 'daftar layanan dan harga, galeri hasil potongan, jam buka, dan pelanggan bisa datang tanpa antre panjang'],
+  [/hotel|resort|losmen|motel|inn/i, 'hotel', 'tipe kamar dan fasilitas, harga, lokasi, dan cara pesan langsung'],
+  [/shop|toko|store|butik|grosir|distro|bangunan|material/i, 'toko', 'daftar produk, harga, pesan lewat WhatsApp, dan lokasi toko'],
   [/bengkel|servis|service|motor|mobil|workshop/i, 'bengkel', 'daftar harga jasa, jadwal servis, dan galeri hasil kerja'],
-  [/laundry|cuci|kiloan/i, 'laundry', 'daftar harga dan layanan, plus booking jemput cucian'],
-  [/klinik|dokter|praktek|apotek|bidan|gigi/i, 'klinik', 'jadwal praktik, daftar layanan, lokasi, dan booking tanpa antre'],
-  [/kursus|bimbel|les|sekolah|belajar|training/i, 'tempat kursus', 'daftar program dan biaya, jadwal kelas, dan pendaftaran online'],
+  [/laundry|cuci|kiloan/i, 'laundry', 'daftar harga dan layanan, serta cara pesan jemput cucian'],
+  [/klinik|dokter|praktek|apotek|bidan|gigi/i, 'klinik', 'jadwal praktik, daftar layanan, lokasi, dan cara daftar tanpa antre'],
+  [/kursus|bimbel|les|sekolah|belajar|training/i, 'tempat kursus', 'daftar program dan biaya, jadwal kelas, dan cara daftar'],
   [/kontraktor|jasa|service|travel|rental|sewa|properti|agen/i, 'usaha jasa', 'daftar layanan, contoh hasil kerja, dan permintaan penawaran lewat WhatsApp'],
 ];
 
@@ -48,16 +48,19 @@ Data usaha:
 INTI PESAN: seluruh pesan harus menjual MANFAAT WEBSITE untuk usaha jenis ini. Manfaatnya harus spesifik untuk kategori itu, bukan manfaat umum.
 
 Manfaat khas per kategori (pilih 3-4 yang paling cocok, jangan campur dengan kategori lain):
-- Villa / penginapan: tamu lihat foto kamar & fasilitas, harga per malam jelas, lokasi, bisa pesan langsung tanpa lewat OTA, terlihat lebih terpercaya.
+- Villa / penginapan: tamu lihat foto kamar & fasilitas, harga per malam jelas, lokasi, bisa pesan langsung tanpa lewat aplikasi lain, terlihat lebih terpercaya.
 - Restoran / warung / kafe: menu & harga terlihat sebelum datang, foto makanan bikin orang tertarik, jam buka, lokasi, pesanan/reservasi langsung masuk WhatsApp.
-- Barbershop / salon: daftar layanan & harga, galeri hasil potongan, jam buka, pelanggan bisa booking tanpa antre.
-- Hotel: tipe kamar & fasilitas, harga, lokasi, booking langsung, lebih dipercaya tamu dari luar kota.
-- Toko / barang: katalog produk, harga, order lewat WhatsApp, lokasi toko, ditemukan di Google saat orang mencari produk itu.
-- Kategori lain (bengkel, laundry, klinik, kursus, jasa, dll): pikirkan sendiri apa yang paling dicari calon pelanggan usaha semacam itu (daftar layanan, harga, jam buka, lokasi, booking/order, bukti hasil kerja), lalu pakai itu.
+- Barbershop / salon: daftar layanan & harga, galeri hasil potongan, jam buka, pelanggan bisa datang tanpa antre panjang.
+- Hotel: tipe kamar & fasilitas, harga, lokasi, pesan langsung, lebih dipercaya tamu dari luar kota.
+- Toko / barang: daftar produk, harga, pesan lewat WhatsApp, lokasi toko, ditemukan di Google saat orang mencari produk itu.
+- Kategori lain (bengkel, laundry, klinik, kursus, jasa, dll): pikirkan sendiri apa yang paling dicari calon pelanggan usaha semacam itu (daftar layanan, harga, jam buka, lokasi, cara pesan, bukti hasil kerja), lalu pakai itu.
 
 Aturan keras:
-- Bahasa Indonesia natural seperti orang chat, bukan bahasa iklan.
-- 3-4 kalimat pendek. Maksimal 480 karakter.
+- Bahasa Indonesia sehari-hari seperti orang chat, bukan bahasa iklan.
+- JANGAN pakai istilah teknis, singkatan, atau bahasa asing: OTA, SEO, platform, landing page, online, booking, update, dsb. Tulis maksudnya dengan kata sehari-hari ("bisa pesan langsung tanpa lewat aplikasi lain", "tanpa potongan komisi aplikasi", "pelanggan bisa lihat sendiri").
+- Sebut produknya "website" (kata ini sudah biasa dipakai orang Indonesia). Jangan pakai kiasan aneh seperti "tempat khusus di internet" atau "tempat pajang foto".
+- Akhiri dengan SATU pertanyaan saja, jangan dua tawaran berturut-turut.
+- 3-4 kalimat pendek. Maksimal 450 karakter.
 - Setiap kalimat manfaat harus menyebut keuntungan untuk pelanggan atau pemiliknya (misal "pelanggan bisa lihat menu dan harga sebelum datang"), bukan sekadar kata "website profesional".
 - Sebut nama usaha sekali secara alami. Kalau namanya tidak jelas, pakai kategorinya.
 - Tawarkan dibuatkan contoh/demo dulu supaya mereka bisa lihat hasilnya.

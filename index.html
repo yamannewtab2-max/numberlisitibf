@@ -164,6 +164,7 @@ var WA_GLYPH = I.wa.replace('<svg ','<svg class="glyph" ');
 /* ---------- store ---------- */
 var KEY = 'leads.v1';
 var TRASH = '__trash';   // pseudo-category for numbers already messaged
+var MSG_VERSION = 2;     // raise this whenever the prompt changes -> stored messages get rewritten
 var S = load();
 var cur = null;          // open category id
 var backAnim = false;
@@ -365,13 +366,20 @@ function bizSheet(id, categoryId){
       toast('Already in ' + catNameOf(dup.categoryId));
       return;
     }
+    var target;
     if(b){
-      b.name = name; b.phone = phone; save(); rerender(); cloud.push('businesses', b);
+      var wasName = b.name;
+      b.name = name; b.phone = phone;
+      if(wasName !== name) b.msg = '';         // written for the old name -> rewrite it
+      save(); rerender(); cloud.push('businesses', b);
+      target = b;
     }else{
       var nb = { id: uid('b_'), name:name, phone:phone, categoryId:categoryId, createdAt:Date.now() };
       S.biz[nb.id] = nb; save(); rerender(); cloud.push('businesses', nb);
+      target = nb;
     }
     closeSheet(); buzz();
+    genMessage(target);          // written now, so tapping WhatsApp later is instant
   }
   document.getElementById('shSave').onclick = go;
   phEl.addEventListener('keydown', function(e){ if(e.key === 'Enter') go(); });
@@ -430,15 +438,15 @@ function tidy(){
 }
 
 var BENEFIT = [
-  [/villa|vila|guest ?house|penginapan|homestay/i, 'villa', 'foto kamar, fasilitas, harga per malam, lokasi, dan tombol pemesanan langsung'],
-  [/resto|restaurant|rumah makan|warung|cafe|kafe|kedai|bakery/i, 'restoran', 'menu dan harga sebelum datang, foto makanan, jam buka, lokasi, dan pesanan lewat WhatsApp'],
-  [/barber|cukur|salon|potong|spa/i, 'barbershop', 'daftar layanan dan harga, galeri hasil potongan, jam buka, dan booking tanpa antre'],
-  [/hotel|resort|losmen|motel|inn/i, 'hotel', 'tipe kamar dan fasilitas, harga, lokasi, dan booking langsung'],
-  [/shop|toko|store|butik|grosir|distro|bangunan|material/i, 'toko', 'katalog produk, harga, order lewat WhatsApp, dan lokasi toko'],
+  [/villa|vila|guest ?house|penginapan|homestay/i, 'villa', 'foto kamar, fasilitas, harga per malam, lokasi, dan cara pesan langsung'],
+  [/resto|restaurant|rumah makan|warung|cafe|kafe|kedai|bakery/i, 'restoran', 'daftar menu dan harga, foto makanan, jam buka, lokasi, dan pesanan lewat WhatsApp'],
+  [/barber|cukur|salon|potong|spa/i, 'barbershop', 'daftar layanan dan harga, galeri hasil potongan, jam buka, dan pelanggan bisa datang tanpa antre panjang'],
+  [/hotel|resort|losmen|motel|inn/i, 'hotel', 'tipe kamar dan fasilitas, harga, lokasi, dan cara pesan langsung'],
+  [/shop|toko|store|butik|grosir|distro|bangunan|material/i, 'toko', 'daftar produk, harga, pesan lewat WhatsApp, dan lokasi toko'],
   [/bengkel|servis|service|motor|mobil|workshop/i, 'bengkel', 'daftar harga jasa, jadwal servis, dan galeri hasil kerja'],
-  [/laundry|cuci|kiloan/i, 'laundry', 'daftar harga dan layanan, serta booking jadwal jemput cucian'],
-  [/klinik|dokter|praktek|apotek|bidan|gigi/i, 'klinik', 'jadwal praktik, daftar layanan, lokasi, dan booking tanpa antre'],
-  [/kursus|bimbel|les|sekolah|belajar|training/i, 'tempat kursus', 'daftar program dan biaya, jadwal kelas, dan pendaftaran online'],
+  [/laundry|cuci|kiloan/i, 'laundry', 'daftar harga dan layanan, serta cara pesan jemput cucian'],
+  [/klinik|dokter|praktek|apotek|bidan|gigi/i, 'klinik', 'jadwal praktik, daftar layanan, lokasi, dan cara daftar tanpa antre'],
+  [/kursus|bimbel|les|sekolah|belajar|training/i, 'tempat kursus', 'daftar program dan biaya, jadwal kelas, dan cara daftar'],
   [/kontraktor|jasa|travel|rental|sewa|properti|agen/i, 'usaha jasa', 'daftar layanan, contoh hasil kerja, dan permintaan penawaran lewat WhatsApp']
 ];
 function template(name, category){
@@ -448,6 +456,43 @@ function template(name, category){
   return 'Halo, saya dapat nomor ' + who + ' dari Google Maps. Saya bikin website untuk ' + cat + ' — isinya ' + benefit + '.\n\n' +
          'Kalau berminat, saya buatkan contohnya dulu (gratis) supaya ' + who + ' bisa lihat hasilnya. Terima kasih.';
 }
+/* The message is written when the number is added, not when WhatsApp is tapped - the tap
+   then just opens wa.me with the text already inside. */
+function genMessage(b){
+  if(!b || !b.name) return Promise.resolve();
+  if(b.msg && b.msgv === MSG_VERSION) return Promise.resolve();
+  return fetch('/api/message', {
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({ name:b.name, category:catNameOf(b.categoryId) })
+  }).then(function(r){ return r.json(); }).then(function(j){
+    if(j && typeof j.message === 'string' && j.message.trim()){
+      b.msg = j.message.trim();
+      b.msgv = MSG_VERSION;
+      save(); cloud.push('businesses', b);
+    }
+  }).catch(function(){});          // offline: filled in by the backlog pass later
+}
+// Anything stored before (or added while offline) gets its message written in the background,
+// a few at a time so it never competes with a tap.
+var genRunning = false;
+function genBacklog(max){
+  if(genRunning || !navigator.onLine) return;
+  var ids = Object.keys(S.biz).filter(function(i){
+    var b = S.biz[i];
+    return b && b.name && (!b.msg || b.msgv !== MSG_VERSION);
+  });
+  if(!ids.length) return;
+  genRunning = true;
+  var i = 0, stop = Math.min(ids.length, max || 3);
+  (function step(){
+    if(i >= stop){ genRunning = false; return; }
+    var b = S.biz[ids[i++]];
+    if(!b){ step(); return; }
+    genMessage(b).then(function(){ setTimeout(step, 300); });
+  })();
+}
+
 function moveToTrash(b){
   if(!b || b.movedAt) return;
   b.movedAt = Date.now();
@@ -455,11 +500,17 @@ function moveToTrash(b){
 }
 function waSend(id){
   var b = S.biz[id]; if(!b) return;
+  buzz(10);
+  // Instant path: the message was written when the number was added.
+  if(b.msg){
+    moveToTrash(b);
+    location.href = waUrl(b.phone, b.msg);
+    return;
+  }
   var c = S.cats[b.categoryId];
   var category = c ? c.name : '';
   var btn = sheetEl.querySelector ? document.querySelector('[data-wa="'+id+'"]') : null;
   if(btn) btn.classList.add('busy');
-  buzz(10);
   var ctrl = ('AbortController' in window) ? new AbortController() : null;
   var to = setTimeout(function(){ if(ctrl) ctrl.abort(); }, 12000);
   var url = '/api/message';
@@ -471,6 +522,7 @@ function waSend(id){
   }).then(function(r){ return r.json(); }).then(function(j){
     clearTimeout(to);
     var msg = (j && typeof j.message === 'string' && j.message.trim()) ? j.message.trim() : template(b.name, category);
+    b.msg = msg; save(); cloud.push('businesses', b);
     moveToTrash(b);                                   // messaged -> out of the category, into Trash
     location.href = waUrl(b.phone, msg);
   }).catch(function(){
@@ -561,7 +613,7 @@ var cloud = (function(){
   }
   function idOf(name){ return String(name).split('/').pop(); }
   function nameOf(col, id){
-    var fields = (col === 'categories') ? ['id','name','createdAt'] : ['id','name','phone','categoryId','createdAt','movedAt'];
+    var fields = (col === 'categories') ? ['id','name','createdAt'] : ['id','name','phone','categoryId','createdAt','movedAt','msg','msgv'];
     return '/' + col + '/' + id + '?' + fields.map(function(f){ return 'updateMask.fieldPaths=' + f; }).join('&');
   }
 
@@ -602,7 +654,7 @@ var cloud = (function(){
     push: function(col, obj){
       var doc = (col === 'categories')
         ? { id:obj.id, name:obj.name, createdAt:obj.createdAt }
-        : { id:obj.id, name:obj.name, phone:obj.phone, categoryId:obj.categoryId, createdAt:obj.createdAt, movedAt:obj.movedAt || 0 };
+        : { id:obj.id, name:obj.name, phone:obj.phone, categoryId:obj.categoryId, createdAt:obj.createdAt, movedAt:obj.movedAt || 0, msg:obj.msg || '', msgv:obj.msgv || 0 };
       enqueue({ col:col, id:obj.id, doc:doc });
     },
     drop: function(col, id){
@@ -750,7 +802,7 @@ function legacy(text, done){
 /* boot */
 tidy();
 renderHome();
-cloud.pull().then(function(pulled){ if(pulled){ tidy(); rerender(); } cloud.flush(); });
+cloud.pull().then(function(pulled){ if(pulled){ tidy(); rerender(); } cloud.flush(); genBacklog(4); });
 
 /* keep every device on the cloud's version - the cloud is the truth, the phone is a cache */
 var syncing = false, syncTimer = null;
@@ -763,6 +815,7 @@ function syncNow(force){
     .then(function(pulled){
       syncing = false;
       if(pulled){ tidy(); rerender(); }
+      genBacklog(3);                 // keep filling in any messages still missing
     }, function(){ syncing = false; });
 }
 function syncSoon(){ clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 500); }
