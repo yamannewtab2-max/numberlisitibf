@@ -56,6 +56,11 @@ h1{font-size:20px;font-weight:640;margin:0;letter-spacing:-.02em}
 .bphone{display:block;color:var(--muted);font-size:14.5px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cnt{color:var(--faint);font-size:14px;font-weight:600;min-width:14px;text-align:right}
 .empty{color:var(--faint);font-size:13.5px;text-align:center;padding:70px 0}
+/* trash sits last on the home list, quieter than the categories */
+.row.trashrow{background:#fff;box-shadow:inset 0 0 0 1.5px var(--card2);margin-top:8px}
+.row.trashrow:active{background:var(--card)}
+.trashlabel{display:flex;align-items:center;gap:11px;color:var(--muted)}
+.trashlabel .cname{color:var(--muted);font-weight:600}
 
 /* icon buttons */
 .ico{width:38px;height:38px;border-radius:13px;display:grid;place-items:center;flex:none;
@@ -157,6 +162,7 @@ var WA_GLYPH = I.wa.replace('<svg ','<svg class="glyph" ');
 
 /* ---------- store ---------- */
 var KEY = 'leads.v1';
+var TRASH = '__trash';   // pseudo-category for numbers already messaged
 var S = load();
 var cur = null;          // open category id
 var backAnim = false;
@@ -211,29 +217,50 @@ function show(id, back){
 }
 function renderHome(){
   var rows = S.order.map(function(id){ return S.cats[id]; }).filter(Boolean);
-  document.getElementById('cats').innerHTML = rows.length ? rows.map(function(c,i){
-    var n = Object.keys(S.biz).filter(function(b){ return S.biz[b].categoryId === c.id; }).length;
+  var html = rows.length ? rows.map(function(c,i){
+    var n = Object.keys(S.biz).filter(function(b){ return S.biz[b].categoryId === c.id && !S.biz[b].movedAt; }).length;
     return '<div class="row" data-open="'+c.id+'" style="animation-delay:'+Math.min(i*20,220)+'ms">'+
       '<span class="grow"><span class="cname'+(isRTL(c.name)?' rtl':'')+'">'+esc(c.name)+'</span></span>'+
       '<span class="cnt num">'+(n||'')+'</span>'+
       '<button class="ico copy" data-copy="'+c.id+'" aria-label="Copy">'+I.copy+'</button>'+
     '</div>';
   }).join('') : '<div class="empty">Empty</div>';
+  // Trash always sits last on the home list: numbers already messaged on WhatsApp.
+  var t = trashCount();
+  html += '<div class="row trashrow" data-trash="1" style="animation-delay:'+Math.min(rows.length*20+40,320)+'ms">'+
+      '<span class="grow trashlabel">'+I.trash+'<span class="cname">Trash</span></span>'+
+      '<span class="cnt num">'+(t||'')+'</span>'+
+    '</div>';
+  document.getElementById('cats').innerHTML = html;
+}
+function trashCount(){ return Object.keys(S.biz).filter(function(b){ return !!(S.biz[b] && S.biz[b].movedAt); }).length; }
+function bizRow(b, i){
+  return '<div class="row" data-edit="'+b.id+'" style="animation-delay:'+Math.min((i||0)*20,220)+'ms">'+
+    '<span class="grow"><span class="bname'+(isRTL(b.name)?' rtl':'')+'">'+esc(b.name)+'</span>'+
+    '<span class="bphone num">'+esc(b.phone)+'</span></span>'+
+    '<button class="ico wa" data-wa="'+b.id+'" aria-label="WhatsApp">'+WA_GLYPH+I.spin+'</button>'+
+  '</div>';
 }
 function renderBiz(){
   var c = S.cats[cur]; if(!c) return;
   document.getElementById('catName').textContent = c.name;
   document.getElementById('catName').classList.toggle('rtl', isRTL(c.name));
-  var rows = Object.keys(S.biz).filter(function(b){ return S.biz[b].categoryId === cur; })
+  var rows = Object.keys(S.biz).filter(function(b){ return S.biz[b].categoryId === cur && !S.biz[b].movedAt; })
     .map(function(b){ return S.biz[b]; })
     .sort(function(a,b){ return (b.createdAt||0) - (a.createdAt||0); });
-  document.getElementById('biz').innerHTML = rows.length ? rows.map(function(b,i){
-    return '<div class="row" data-edit="'+b.id+'" style="animation-delay:'+Math.min(i*20,220)+'ms">'+
-      '<span class="grow"><span class="bname'+(isRTL(b.name)?' rtl':'')+'">'+esc(b.name)+'</span>'+
-      '<span class="bphone num">'+esc(b.phone)+'</span></span>'+
-      '<button class="ico wa" data-wa="'+b.id+'" aria-label="WhatsApp">'+WA_GLYPH+I.spin+'</button>'+
-    '</div>';
-  }).join('') : '<div class="empty">Empty</div>';
+  document.getElementById('biz').innerHTML = rows.length ? rows.map(bizRow).join('') : '<div class="empty">Empty</div>';
+}
+function renderTrash(){
+  document.getElementById('catName').textContent = 'Trash';
+  document.getElementById('catName').classList.remove('rtl');
+  var rows = Object.keys(S.biz).filter(function(b){ return S.biz[b].movedAt; })
+    .map(function(b){ return S.biz[b]; })
+    .sort(function(a,b){ return (b.movedAt||0) - (a.movedAt||0); });
+  document.getElementById('biz').innerHTML = rows.length ? rows.map(bizRow).join('') : '<div class="empty">Empty</div>';
+}
+function rerender(){
+  if(cur === TRASH) renderTrash(); else if(cur) renderBiz();
+  renderHome();
 }
 
 /* ---------- sheet ---------- */
@@ -337,10 +364,10 @@ function bizSheet(id, categoryId){
       return;
     }
     if(b){
-      b.name = name; b.phone = phone; save(); renderBiz(); cloud.push('businesses', b);
+      b.name = name; b.phone = phone; save(); rerender(); cloud.push('businesses', b);
     }else{
       var nb = { id: uid('b_'), name:name, phone:phone, categoryId:categoryId, createdAt:Date.now() };
-      S.biz[nb.id] = nb; save(); renderBiz(); cloud.push('businesses', nb);
+      S.biz[nb.id] = nb; save(); rerender(); cloud.push('businesses', nb);
     }
     closeSheet(); buzz();
   }
@@ -350,7 +377,7 @@ function bizSheet(id, categoryId){
     document.getElementById('shDel').onclick = function(){
       closeSheet();
       confirmDelete('This number', b.name || b.phone, function(){
-        delete S.biz[b.id]; save(); renderBiz(); cloud.drop('businesses', b.id);
+        delete S.biz[b.id]; save(); rerender(); cloud.drop('businesses', b.id);
       });
     };
   }
@@ -419,6 +446,11 @@ function template(name, category){
   return 'Halo, saya dapat nomor ' + who + ' dari Google Maps. Saya bikin website untuk ' + cat + ' — isinya ' + benefit + '.\n\n' +
          'Kalau berminat, saya buatkan contohnya dulu (gratis) supaya ' + who + ' bisa lihat hasilnya. Terima kasih.';
 }
+function moveToTrash(b){
+  if(!b || b.movedAt) return;
+  b.movedAt = Date.now();
+  save(); cloud.push('businesses', b); rerender();
+}
 function waSend(id){
   var b = S.biz[id]; if(!b) return;
   var c = S.cats[b.categoryId];
@@ -437,10 +469,12 @@ function waSend(id){
   }).then(function(r){ return r.json(); }).then(function(j){
     clearTimeout(to);
     var msg = (j && typeof j.message === 'string' && j.message.trim()) ? j.message.trim() : template(b.name, category);
+    moveToTrash(b);                                   // messaged -> out of the category, into Trash
     location.href = waUrl(b.phone, msg);
   }).catch(function(){
     clearTimeout(to);
     if(btn) btn.classList.remove('busy');
+    moveToTrash(b);
     location.href = waUrl(b.phone, template(b.name, category));
   });
 }
@@ -525,7 +559,7 @@ var cloud = (function(){
   }
   function idOf(name){ return String(name).split('/').pop(); }
   function nameOf(col, id){
-    var fields = (col === 'categories') ? ['id','name','createdAt'] : ['id','name','phone','categoryId','createdAt'];
+    var fields = (col === 'categories') ? ['id','name','createdAt'] : ['id','name','phone','categoryId','createdAt','movedAt'];
     return '/' + col + '/' + id + '?' + fields.map(function(f){ return 'updateMask.fieldPaths=' + f; }).join('&');
   }
 
@@ -564,7 +598,7 @@ var cloud = (function(){
     push: function(col, obj){
       var doc = (col === 'categories')
         ? { id:obj.id, name:obj.name, createdAt:obj.createdAt }
-        : { id:obj.id, name:obj.name, phone:obj.phone, categoryId:obj.categoryId, createdAt:obj.createdAt };
+        : { id:obj.id, name:obj.name, phone:obj.phone, categoryId:obj.categoryId, createdAt:obj.createdAt, movedAt:obj.movedAt || 0 };
       enqueue({ col:col, id:obj.id, doc:doc });
     },
     drop: function(col, id){
@@ -612,6 +646,7 @@ document.getElementById('cats').addEventListener('click', function(e){
     var c = S.cats[cp.getAttribute('data-copy')]; if(!c) return;
     copyText(c.name, cp); return;
   }
+  if(e.target.closest('[data-trash]')){ openTrash(); return; }
   var row = e.target.closest('[data-open]');
   if(row && !row._lp) openCategory(row.getAttribute('data-open'));
 });
@@ -652,27 +687,41 @@ sheetEl.addEventListener('click', function(e){
 function openCategory(id){
   cur = id;
   renderBiz();
+  document.getElementById('fab').classList.remove('hide');
   show('cat');
   try{ history.pushState({v:'cat'}, ''); }catch(e){}
 }
+function openTrash(){
+  cur = TRASH;
+  renderTrash();
+  document.getElementById('fab').classList.add('hide');   // nothing to add in Trash
+  show('cat');
+  try{ history.pushState({v:'trash'}, ''); }catch(e){}
+}
 document.getElementById('back').addEventListener('click', function(){ goBack(); });
+function toHome(){
+  cur = null;
+  document.getElementById('fab').classList.remove('hide');
+  renderHome(); show('home', true);
+}
 function goBack(){
   if(sheetOpen){ closeSheet(); return; }
-  cur = null; renderHome(); show('home', true);
+  toHome();
   try{ history.back(); }catch(e){}
 }
 window.addEventListener('popstate', function(){
   if(sheetOpen){ closeSheet(); return; }
-  if(cur){ cur = null; renderHome(); show('home', true); }
+  if(cur) toHome();
 });
 
 document.getElementById('fab').addEventListener('click', function(){
   buzz(8);
+  if(cur === TRASH) return;
   if(cur) bizSheet(null, cur); else addCategory();
 });
 
 document.addEventListener('visibilitychange', function(){
-  if(!document.hidden && cur) renderBiz();
+  if(!document.hidden && cur) rerender();
 });
 
 /* copy */

@@ -15,6 +15,11 @@ Mesin kumpul prospek. Google Maps → **＋** → kategori → simpan nomor → 
    pesan bahasa Indonesia dibuat → WhatsApp terbuka dengan pesan itu.
    **Pesan tidak pernah dikirim otomatis** — kamu yang menekan kirim.
 
+5. **Trash** ada di paling bawah home. Setiap nomor yang sudah kamu kirimi pesan WhatsApp
+   otomatis pindah ke Trash dan keluar dari kategorinya, jadi daftar kategori hanya berisi
+   yang belum dihubungi. Nomor di Trash tetap dihitung "sudah dipakai" (tidak bisa dimasukkan
+   lagi), dan bisa dihapus permanen dari sana.
+
 UI sengaja tanpa teks tambahan. Tidak ada login, catatan, peta, CRM, atau dashboard.
 
 **Satu nomor hanya sekali.** Nomor yang sudah tersimpan tidak bisa dimasukkan lagi walau
