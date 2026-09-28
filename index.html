@@ -373,7 +373,7 @@ function waSend(id){
   if(btn) btn.classList.add('busy');
   buzz(10);
   var ctrl = ('AbortController' in window) ? new AbortController() : null;
-  var to = setTimeout(function(){ if(ctrl) ctrl.abort(); }, 7000);
+  var to = setTimeout(function(){ if(ctrl) ctrl.abort(); }, 12000);
   var url = '/api/message';
   fetch(url, {
     method:'POST',

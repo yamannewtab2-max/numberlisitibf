@@ -11,7 +11,7 @@ Mesin kumpul prospek. Google Maps → **＋** → kategori → simpan nomor → 
 2. **＋ kanan atas** = kategori baru.
 3. **Halaman kategori** = daftar usaha yang sudah disimpan (nama + nomor + tombol WhatsApp).
    **＋ kanan atas** = tambah nomor. Tekan baris = edit / hapus.
-4. **Tombol WhatsApp** → nama usaha + kategori dikirim ke Gemini 3.5 Flash-Lite →
+4. **Tombol WhatsApp** → nama usaha + kategori dikirim ke Gemini 3.1 Flash-Lite →
    pesan bahasa Indonesia dibuat → WhatsApp terbuka dengan pesan itu.
    **Pesan tidak pernah dikirim otomatis** — kamu yang menekan kirim.
 
@@ -45,7 +45,7 @@ yang tahu project ID bisa membaca/menulis — jangan simpan data sensitif di sin
 
 ## Pesan AI
 
-`api/message.js` memanggil Gemini 3.5 Flash-Lite dengan prompt pendek dan mengembalikan
+`api/message.js` memanggil Gemini 3.1 Flash-Lite dengan prompt pendek dan mengembalikan
 satu pesan siap kirim. Setel variabel lingkungan di Vercel:
 
 ```

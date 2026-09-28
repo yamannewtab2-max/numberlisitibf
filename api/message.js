@@ -5,7 +5,10 @@
 // If the key is missing (or Gemini fails), a built-in Indonesian template is
 // returned instead, so the WhatsApp flow always works.
 
-const MODELS = ['gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-flash-lite-latest'];
+// Fast Flash-Lite models in preference order: the first answers in ~1s. 2.5-flash-lite
+// is retired for new API keys ("no longer available to new users"), so it is not used.
+const MODELS = ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-flash-lite-latest'];
+const PER_MODEL_TIMEOUT_MS = 6000;
 const endpointFor = (m) => `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
 
 const LIMITS = { name: 80, category: 40 };
@@ -81,7 +84,7 @@ module.exports = async (req, res) => {
   for (const model of MODELS) {
     try {
       const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 8000);
+      const timer = setTimeout(() => ctrl.abort(), PER_MODEL_TIMEOUT_MS);
       const r = await fetch(endpointFor(model), {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
@@ -107,7 +110,7 @@ module.exports = async (req, res) => {
       res.status(200).json({ ok: true, source: 'gemini', model, message: text });
       return;
     } catch (e) {
-      // try the next model
+      console.error('gemini failed', model, e && e.message);   // try the next model
     }
   }
   res.status(200).json({ ok: true, source: 'template', message: fallback(name, category) });
