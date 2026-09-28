@@ -2,6 +2,8 @@
 
 Mesin kumpul prospek. Google Maps → **＋** → kategori → simpan nomor → **WhatsApp** → pesan siap kirim.
 
+**Live: https://numberlisitibf.vercel.app** — buka di HP, lalu *Add to Home Screen* supaya jalan full-screen.
+
 ## Alur
 
 1. **Home** = daftar kategori. Tombol copy di kanan menyalin **nama kategori saja**.
