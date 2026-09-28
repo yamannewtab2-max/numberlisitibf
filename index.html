@@ -165,7 +165,7 @@ var WA_GLYPH = I.wa.replace('<svg ','<svg class="glyph" ');
 /* ---------- store ---------- */
 var KEY = 'leads.v1';
 var TRASH = '__trash';   // pseudo-category for numbers already messaged
-var MSG_VERSION = 2;     // raise this whenever the prompt changes -> stored messages get rewritten
+var MSG_VERSION = 3;     // raise this whenever the prompt changes -> stored messages get rewritten
 var S = load();
 var cur = null;          // open category id
 var lastSig = '';        // last rendered state, so a background sync only redraws on real change
@@ -473,21 +473,23 @@ function tidy(){
 var BENEFIT = [
   [/villa|vila|guest ?house|penginapan|homestay/i, 'villa', 'foto kamar, fasilitas, harga per malam, lokasi, dan cara pesan langsung'],
   [/resto|restaurant|rumah makan|warung|cafe|kafe|kedai|bakery/i, 'restoran', 'daftar menu dan harga, foto makanan, jam buka, lokasi, dan pesanan lewat WhatsApp'],
-  [/barber|cukur|salon|potong|spa/i, 'barbershop', 'daftar layanan dan harga, galeri hasil potongan, jam buka, dan pelanggan bisa datang tanpa antre panjang'],
-  [/hotel|resort|losmen|motel|inn/i, 'hotel', 'tipe kamar dan fasilitas, harga, lokasi, dan cara pesan langsung'],
-  [/shop|toko|store|butik|grosir|distro|bangunan|material/i, 'toko', 'daftar produk, harga, pesan lewat WhatsApp, dan lokasi toko'],
+  [/barber|cukur|salon|potong|\bspa\b/i, 'barbershop', 'daftar layanan dan harga, galeri hasil potongan, jam buka, dan pelanggan bisa datang tanpa antre panjang'],
+  [/hotel|resort|losmen|motel|\binn\b/i, 'hotel', 'tipe kamar dan fasilitas, harga, lokasi, dan cara pesan langsung'],
   [/bengkel|servis|service|motor|mobil|workshop/i, 'bengkel', 'daftar harga jasa, jadwal servis, dan galeri hasil kerja'],
+  [/\bshop\b|\bstore\b|butik|grosir|distro|bangunan|material|toko/i, 'toko', 'daftar produk, harga, pesan lewat WhatsApp, dan lokasi toko'],
   [/laundry|cuci|kiloan/i, 'laundry', 'daftar harga dan layanan, serta cara pesan jemput cucian'],
   [/klinik|dokter|praktek|apotek|bidan|gigi/i, 'klinik', 'jadwal praktik, daftar layanan, lokasi, dan cara daftar tanpa antre'],
-  [/kursus|bimbel|les|sekolah|belajar|training/i, 'tempat kursus', 'daftar program dan biaya, jadwal kelas, dan cara daftar'],
-  [/kontraktor|jasa|travel|rental|sewa|properti|agen/i, 'usaha jasa', 'daftar layanan, contoh hasil kerja, dan permintaan penawaran lewat WhatsApp']
+  [/kursus|bimbel|\bles\b|sekolah|belajar|training/i, 'tempat kursus', 'daftar program dan biaya, jadwal kelas, dan cara daftar'],
+  [/kontraktor|\bjasa\b|travel|rental|sewa|properti|agen/i, 'usaha jasa', 'daftar layanan, contoh hasil kerja, dan permintaan penawaran lewat WhatsApp']
 ];
 function template(name, category){
   var t = String(category || ''), cat = t || 'usaha', benefit = 'profil usaha, foto, harga, lokasi, dan tombol WhatsApp';
   for(var i=0;i<BENEFIT.length;i++){ if(BENEFIT[i][0].test(t)){ cat = BENEFIT[i][1]; benefit = BENEFIT[i][2]; break; } }
   var who = name || cat;
   return 'Halo, saya dapat nomor ' + who + ' dari Google Maps. Saya bikin website untuk ' + cat + ' — isinya ' + benefit + '.\n\n' +
-         'Kalau berminat, saya buatkan contohnya dulu (gratis) supaya ' + who + ' bisa lihat hasilnya. Terima kasih.';
+         'Kalau alamat website-nya pakai .com dengan nama ' + who + ' sendiri, usaha ini terlihat lebih resmi dan mudah diingat orang.\n\n' +
+         'Soal biaya tidak perlu khawatir, semua bisa disesuaikan dengan budget Bapak/Ibu.\n\n' +
+         'Kalau ada waktu sebentar, saya ingin tanya: website seperti apa yang Bapak/Ibu inginkan?';
 }
 /* The message is written when the number is added, not when WhatsApp is tapped - the tap
    then just opens wa.me with the text already inside. */

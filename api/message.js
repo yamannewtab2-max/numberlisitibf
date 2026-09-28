@@ -16,14 +16,14 @@ const LIMITS = { name: 80, category: 40 };
 const FALLBACK = [
   [/villa|vila|guest ?house|penginapan|homestay/i, 'villa', 'foto kamar, fasilitas, harga per malam, lokasi, dan cara pesan langsung'],
   [/resto|restaurant|rumah makan|warung|cafe|kafe|kedai|bakery/i, 'restoran', 'daftar menu dan harga, foto makanan, jam buka, lokasi, dan pesanan lewat WhatsApp'],
-  [/barber|cukur|salon|potong|spa/i, 'barbershop', 'daftar layanan dan harga, galeri hasil potongan, jam buka, dan pelanggan bisa datang tanpa antre panjang'],
-  [/hotel|resort|losmen|motel|inn/i, 'hotel', 'tipe kamar dan fasilitas, harga, lokasi, dan cara pesan langsung'],
-  [/shop|toko|store|butik|grosir|distro|bangunan|material/i, 'toko', 'daftar produk, harga, pesan lewat WhatsApp, dan lokasi toko'],
+  [/barber|cukur|salon|potong|\bspa\b/i, 'barbershop', 'daftar layanan dan harga, galeri hasil potongan, jam buka, dan pelanggan bisa datang tanpa antre panjang'],
+  [/hotel|resort|losmen|motel|\binn\b/i, 'hotel', 'tipe kamar dan fasilitas, harga, lokasi, dan cara pesan langsung'],
   [/bengkel|servis|service|motor|mobil|workshop/i, 'bengkel', 'daftar harga jasa, jadwal servis, dan galeri hasil kerja'],
+  [/\bshop\b|\bstore\b|butik|grosir|distro|bangunan|material|toko/i, 'toko', 'daftar produk, harga, pesan lewat WhatsApp, dan lokasi toko'],
   [/laundry|cuci|kiloan/i, 'laundry', 'daftar harga dan layanan, serta cara pesan jemput cucian'],
   [/klinik|dokter|praktek|apotek|bidan|gigi/i, 'klinik', 'jadwal praktik, daftar layanan, lokasi, dan cara daftar tanpa antre'],
-  [/kursus|bimbel|les|sekolah|belajar|training/i, 'tempat kursus', 'daftar program dan biaya, jadwal kelas, dan cara daftar'],
-  [/kontraktor|jasa|service|travel|rental|sewa|properti|agen/i, 'usaha jasa', 'daftar layanan, contoh hasil kerja, dan permintaan penawaran lewat WhatsApp'],
+  [/kursus|bimbel|\bles\b|sekolah|belajar|training/i, 'tempat kursus', 'daftar program dan biaya, jadwal kelas, dan cara daftar'],
+  [/kontraktor|\bjasa\b|travel|rental|sewa|properti|agen/i, 'usaha jasa', 'daftar layanan, contoh hasil kerja, dan permintaan penawaran lewat WhatsApp'],
 ];
 
 function fallback(name, category) {
@@ -35,40 +35,53 @@ function fallback(name, category) {
   const who = name || cat;
   return (
     `Halo, saya dapat nomor ${who} dari Google Maps. Saya bikin website untuk ${cat} — isinya ${benefit}.\n\n` +
-    `Kalau berminat, saya buatkan contohnya dulu (gratis) supaya ${who} bisa lihat hasilnya. Terima kasih.`
+    `Kalau alamat website-nya pakai .com dengan nama ${who} sendiri, usaha ini terlihat lebih resmi dan mudah diingat orang.\n\n` +
+    `Soal biaya tidak perlu khawatir, semua bisa disesuaikan dengan budget Bapak/Ibu.\n\n` +
+    `Kalau ada waktu sebentar, saya ingin tanya: website seperti apa yang Bapak/Ibu inginkan?`
   );
 }
 
-const PROMPT = `Kamu menulis pesan WhatsApp pertama ke pemilik usaha kecil di Indonesia, setelah menemukan nomornya di Google Maps. Kamu menawarkan jasa pembuatan website profesional untuk usaha mereka.
+const PROMPT = `Kamu menulis pesan WhatsApp pertama ke pemilik usaha kecil di Indonesia, setelah menemukan nomornya di Google Maps. Kamu menawarkan jasa pembuatan website untuk usaha mereka.
 
 Data usaha:
 - Nama usaha: {NAME}
 - Kategori: {CATEGORY}
 
-INTI PESAN: seluruh pesan harus menjual MANFAAT WEBSITE untuk usaha jenis ini. Manfaatnya harus spesifik untuk kategori itu, bukan manfaat umum.
-
-Manfaat khas per kategori (pilih 3-4 yang paling cocok, jangan campur dengan kategori lain):
-- Villa / penginapan: tamu lihat foto kamar & fasilitas, harga per malam jelas, lokasi, bisa pesan langsung tanpa lewat aplikasi lain, terlihat lebih terpercaya.
-- Restoran / warung / kafe: menu & harga terlihat sebelum datang, foto makanan bikin orang tertarik, jam buka, lokasi, pesanan/reservasi langsung masuk WhatsApp.
-- Barbershop / salon: daftar layanan & harga, galeri hasil potongan, jam buka, pelanggan bisa datang tanpa antre panjang.
+Pesan harus menyentuh 4 hal ini, singkat dan mengalir:
+1. MANFAAT WEBSITE untuk usaha jenis ini (ambil 2-3 yang paling cocok, jangan campur kategori lain):
+- Villa / penginapan: tamu lihat foto kamar & fasilitas, harga per malam jelas, lokasi, bisa pesan langsung tanpa lewat aplikasi lain.
+- Restoran / warung / kafe: menu & harga terlihat sebelum datang, foto makanan, jam buka, lokasi, pesanan langsung masuk WhatsApp.
+- Barbershop / salon: daftar layanan & harga, galeri hasil potongan, jam buka, pelanggan datang tanpa antre panjang.
 - Hotel: tipe kamar & fasilitas, harga, lokasi, pesan langsung, lebih dipercaya tamu dari luar kota.
-- Toko / barang: daftar produk, harga, pesan lewat WhatsApp, lokasi toko, ditemukan di Google saat orang mencari produk itu.
-- Kategori lain (bengkel, laundry, klinik, kursus, jasa, dll): pikirkan sendiri apa yang paling dicari calon pelanggan usaha semacam itu (daftar layanan, harga, jam buka, lokasi, cara pesan, bukti hasil kerja), lalu pakai itu.
+- Toko / barang: daftar produk, harga, pesan lewat WhatsApp, lokasi, mudah ditemukan orang di Google.
+- Kategori lain (bengkel, laundry, klinik, kursus, jasa, dll): pikirkan sendiri apa yang paling dicari calon pelanggan usaha semacam itu.
+2. ALAMAT WEBSITE SENDIRI: dorong mereka punya website dengan alamat .com memakai nama usaha mereka sendiri (contoh: namaUsahanya.com). Alasannya: terlihat resmi dan lebih dipercaya, mudah diingat orang, dan jadi milik mereka sendiri - bukan numpang di akun orang lain.
+3. HARGA: sampaikan mereka sama sekali tidak perlu khawatir soal harga, karena semuanya bisa disesuaikan dengan budget mereka.
+4. PENUTUP: tanya apakah mereka punya waktu sebentar, karena kamu ingin tahu website seperti apa yang mereka inginkan.
 
 Aturan keras:
 - Bahasa Indonesia sehari-hari seperti orang chat, bukan bahasa iklan.
-- JANGAN pakai istilah teknis, singkatan, atau bahasa asing: OTA, SEO, platform, landing page, online, booking, update, dsb. Tulis maksudnya dengan kata sehari-hari ("bisa pesan langsung tanpa lewat aplikasi lain", "tanpa potongan komisi aplikasi", "pelanggan bisa lihat sendiri").
-- Sebut produknya "website" (kata ini sudah biasa dipakai orang Indonesia). Jangan pakai kiasan aneh seperti "tempat khusus di internet" atau "tempat pajang foto".
-- Akhiri dengan SATU pertanyaan saja, jangan dua tawaran berturut-turut.
-- 3-4 kalimat pendek. Maksimal 450 karakter.
-- Setiap kalimat manfaat harus menyebut keuntungan untuk pelanggan atau pemiliknya (misal "pelanggan bisa lihat menu dan harga sebelum datang"), bukan sekadar kata "website profesional".
+- 4-5 kalimat pendek. Maksimal 550 karakter.
+- JANGAN menawarkan contoh, demo, atau draf terlebih dulu. Dilarang menulis "saya buatkan contohnya dulu" atau sejenisnya. Yang ditawarkan hanya obrolan singkat tentang keinginan mereka.
+- PESAN WAJIB memuat alamat ".com" yang memakai nama usaha mereka (contoh: namaUsahanya.com). Jangan sampai lupa.
+- JANGAN pakai istilah teknis, singkatan, atau bahasa asing: OTA, SEO, platform, landing page, domain, online, booking, update, dsb. Tulis maksudnya dengan kata sehari-hari ("alamat website .com", "bisa pesan langsung tanpa lewat aplikasi lain").
+- Sebut produknya "website" (kata ini sudah biasa dipakai orang Indonesia). Jangan pakai kiasan aneh seperti "tempat khusus di internet".
+- Akhiri dengan SATU pertanyaan saja, yaitu soal waktu mereka.
+- Setiap kalimat manfaat harus menyebut keuntungan untuk pelanggan atau pemiliknya, bukan sekadar kata "website profesional".
 - Sebut nama usaha sekali secara alami. Kalau namanya tidak jelas, pakai kategorinya.
-- Tawarkan dibuatkan contoh/demo dulu supaya mereka bisa lihat hasilnya.
 - Maksimal 1 emoji, atau tidak sama sekali. Jangan pakai tanda seru berlebihan.
-- Jangan sebut harga jasa. Jangan menjanjikan hal yang tidak pasti (jumlah pelanggan, omzet). Jangan mengaku dari perusahaan tertentu, dan jangan mengaku sudah pernah menghubungi mereka.
-- Akhiri dengan satu pertanyaan singkat yang mudah dijawab, atau ajakan halus — bukan perintah.
+- Jangan sebut angka harga. Jangan menjanjikan hal yang tidak pasti (jumlah pelanggan, omzet). Jangan mengaku dari perusahaan tertentu, dan jangan mengaku sudah pernah menghubungi mereka.
 
 Balas HANYA isi pesannya. Tanpa tanda kutip, tanpa penjelasan, tanpa judul.`;
+
+// The owner's rules, enforced on the model's output instead of trusted to the prompt.
+function passes(text) {
+  const t = text.toLowerCase();
+  if (!t.includes('.com')) return false;                                  // must offer their own .com
+  if (/contoh(nya)?\s*(dulu|demo|tampilan|desain)|saya\s+buatkan\s+(contoh|demo|draf)/.test(t)) return false;
+  if (/ota|seo|landing page|platform\b/.test(t)) return false;            // no jargon
+  return text.length <= 700;
+}
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -97,40 +110,43 @@ module.exports = async (req, res) => {
   const prompt = PROMPT.replace('{NAME}', name || '-').replace('{CATEGORY}', category || '-');
   let reason = 'unavailable';
 
-  for (const model of MODELS) {
-    try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), PER_MODEL_TIMEOUT_MS);
-      const r = await fetch(endpointFor(model), {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-        signal: ctrl.signal,
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.9,
-            topP: 0.95,
-            maxOutputTokens: 400,
-          },
-        }),
-      });
-      clearTimeout(timer);
+  for (let pass = 0; pass < 2; pass++) {          // one retry if the message breaks a rule
+    for (const model of MODELS) {
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), PER_MODEL_TIMEOUT_MS);
+        const r = await fetch(endpointFor(model), {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+          signal: ctrl.signal,
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.9,
+              topP: 0.95,
+              maxOutputTokens: 400,
+            },
+          }),
+        });
+        clearTimeout(timer);
 
-      if (r.status === 429) { reason = 'rate-limited'; console.error('gemini 429', model); continue; }
-      if (r.status === 404) { reason = 'retired'; continue; }
+        if (r.status === 429) { reason = 'rate-limited'; console.error('gemini 429', model); continue; }
+        if (r.status === 404) { reason = 'retired'; continue; }
 
-      const j = await r.json();
-      const parts = (((j.candidates || [])[0] || {}).content || {}).parts || [];
-      let text = parts.map((p) => p.text || '').join('').trim();
+        const j = await r.json();
+        const parts = (((j.candidates || [])[0] || {}).content || {}).parts || [];
+        let text = parts.map((p) => p.text || '').join('').trim();
 
-      text = text.replace(/^```[a-z]*\s*/i, '').replace(/```$/,'').replace(/^["'“”]+|["'“”]+$/g, '').trim();
+        text = text.replace(/^```[a-z]*\s*/i, '').replace(/```$/,'').replace(/^["'“”]+|["'“”]+$/g, '').trim();
 
-      if (!text || text.length > 700) continue;   // retired model or odd reply -> next model, then template
-      res.status(200).json({ ok: true, source: 'gemini', model, message: text });
-      return;
-    } catch (e) {
-      reason = 'error';
-      console.error('gemini failed', model, e && e.message);   // try the next model
+        if (!text) continue;
+        if (!passes(text)) { reason = 'off-rules'; console.error('gemini off-rules', model); continue; }
+        res.status(200).json({ ok: true, source: 'gemini', model, message: text });
+        return;
+      } catch (e) {
+        reason = 'error';
+        console.error('gemini failed', model, e && e.message);   // try the next model
+      }
     }
   }
   res.status(200).json({ ok: true, source: 'template', reason, message: fallback(name, category) });
