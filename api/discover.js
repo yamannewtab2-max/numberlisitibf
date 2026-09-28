@@ -17,6 +17,15 @@ const DEFAULT_R = 5000;
 
 function digits(s) { return String(s == null ? '' : s).replace(/\D/g, ''); }
 
+// A bare name such as "Bromo" also matches places abroad (Bromo, Kentucky), so the geocoder is
+// pinned to Indonesia and the area is only widened to the whole world if that finds nothing.
+async function geocode(area, key) {
+  const base = GEO + '?q=' + encodeURIComponent(area) + '&lang=id&limit=1&apiKey=' + key;
+  let g = await getJSON(base + '&in=' + encodeURIComponent('countryCode:IDN'));
+  if (!(g.items || []).length) g = await getJSON(base);
+  return (g.items || [])[0] || null;
+}
+
 // 0812… / +62 812… / 62 812… / 812… -> 0812… (mobile) ; anything else -> ''
 function toMobile(raw) {
   let d = digits(raw);
@@ -71,8 +80,7 @@ module.exports = async function handler(req, res) {
     // coordinates the app already has are reused.
     if (area || !isFinite(lat) || !isFinite(lng)) {
       if (!area) return res.status(400).json({ error: 'Type an area' });
-      const g = await getJSON(GEO + '?q=' + encodeURIComponent(area) + '&lang=id&limit=1&apiKey=' + key);
-      const hit = (g.items || [])[0];
+      const hit = await geocode(area, key);
       if (!hit) return res.status(404).json({ error: 'Area not found: ' + area });
       lat = hit.position.lat; lng = hit.position.lng;
       label = hit.address ? (hit.address.label || hit.title) : hit.title;
