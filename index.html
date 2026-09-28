@@ -395,7 +395,10 @@ function waSend(id){
 var cloud = (function(){
   var CFG = (window.APP_CONFIG && window.APP_CONFIG.firebase) || {};
   var on = !!(CFG.apiKey && CFG.projectId && String(CFG.apiKey).indexOf('AIza') === 0);
-  var BASE = on ? ('https://firestore.googleapis.com/v1/projects/' + CFG.projectId + '/databases/(default)/documents?key=' + encodeURIComponent(CFG.apiKey)) : '';
+  var BASE = on ? ('https://firestore.googleapis.com/v1/projects/' + CFG.projectId + '/databases/(default)/documents') : '';
+  var KEYQ = on ? ('key=' + encodeURIComponent(CFG.apiKey)) : '';
+  // The key must be appended last, after any path or query the call already carries.
+  function url(path){ return BASE + path + (path.indexOf('?') >= 0 ? '&' : '?') + KEYQ; }
   var AUTHKEY = 'leads.auth';
   var auth = null, inflight = null;
   try{ auth = JSON.parse(localStorage.getItem(AUTHKEY)); }catch(e){ auth = null; }
@@ -430,7 +433,7 @@ var cloud = (function(){
   function raw(path, opts, token){
     var h = { 'content-type':'application/json' };
     if(token) h.authorization = 'Bearer ' + token;
-    return fetch(BASE + path, { method:opts.method || 'GET', headers:h, body:opts.body }).then(function(r){
+    return fetch(url(path), { method:opts.method || 'GET', headers:h, body:opts.body }).then(function(r){
       if(r.status === 401 || r.status === 403) return { denied:true };   // rules (or identity) said no
       if(!r.ok) throw new Error('http ' + r.status);
       return r.json().catch(function(){ return {}; });
@@ -467,7 +470,10 @@ var cloud = (function(){
     return o;
   }
   function idOf(name){ return String(name).split('/').pop(); }
-  function nameOf(col, id){ return '/' + col + '/' + id + '?updateMask.fieldPaths=id&updateMask.fieldPaths=name&updateMask.fieldPaths=phone&updateMask.fieldPaths=categoryId&updateMask.fieldPaths=createdAt'; }
+  function nameOf(col, id){
+    var fields = (col === 'categories') ? ['id','name','createdAt'] : ['id','name','phone','categoryId','createdAt'];
+    return '/' + col + '/' + id + '?' + fields.map(function(f){ return 'updateMask.fieldPaths=' + f; }).join('&');
+  }
 
   return {
     on: function(){ return on; },
