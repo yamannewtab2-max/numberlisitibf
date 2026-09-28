@@ -15,14 +15,18 @@ const LIMITS = { name: 80, category: 40 };
 
 const FALLBACK = [
   [/villa|vila|guest ?house|penginapan|homestay/i, 'villa', 'foto kamar, fasilitas, harga per malam, lokasi, dan cara pesan langsung'],
-  [/resto|restaurant|rumah makan|warung|cafe|kafe|kedai|bakery/i, 'restoran', 'daftar menu dan harga, foto makanan, jam buka, lokasi, dan pesanan lewat WhatsApp'],
-  [/barber|cukur|salon|potong|\bspa\b/i, 'barbershop', 'daftar layanan dan harga, galeri hasil potongan, jam buka, dan pelanggan bisa datang tanpa antre panjang'],
+  [/resto|restaurant|rumah makan|warung|cafe|kafe|kedai|seafood|ikan|kuliner|katering|catering|kue|roti|bakery|sate|ayam|bakso|nasi|mie|martabak|dapur/i, 'restoran', 'daftar menu dan harga, foto makanan, jam buka, lokasi, dan pesanan lewat WhatsApp'],
+  [/barber|cukur|salon|potong|\bspa\b|perawatan/i, 'barbershop', 'daftar layanan dan harga, galeri hasil potongan, jam buka, dan pelanggan bisa datang tanpa antre panjang'],
   [/hotel|resort|losmen|motel|\binn\b/i, 'hotel', 'tipe kamar dan fasilitas, harga, lokasi, dan cara pesan langsung'],
   [/bengkel|servis|service|motor|mobil|workshop/i, 'bengkel', 'daftar harga jasa, jadwal servis, dan galeri hasil kerja'],
-  [/\bshop\b|\bstore\b|butik|grosir|distro|bangunan|material|toko/i, 'toko', 'daftar produk, harga, pesan lewat WhatsApp, dan lokasi toko'],
+  [/plumber|tukang|pipa|instalasi|listrik|elektrik/i, 'jasa servis', 'daftar layanan dan area yang dilayani, kisaran harga, dan cara menghubungi lewat WhatsApp'],
+  [/gym|fitness|senam|yoga|olahraga|sanggar/i, 'gym', 'jadwal latihan, harga keanggotaan, galeri tempat dan alat, lokasi, dan cara mendaftar'],
+  [/wedding|pernikahan|dekorasi|rias|organizer|tenda/i, 'jasa wedding', 'paket dan harga, galeri hasil dekorasi, dan cara menghubungi lewat WhatsApp'],
+  [/print|percetakan|cetak|fotokopi|sablon/i, 'percetakan', 'daftar jenis cetakan dan harga, kirim file lewat WhatsApp, dan lokasi'],
+  [/klinik|dokter|praktek|apotek|bidan|gigi|rumah sakit/i, 'klinik', 'jadwal praktik, daftar layanan, lokasi, dan cara daftar tanpa antre'],
+  [/kursus|bimbel|\bles\b|sekolah|\bschool\b|pondok|pesantren|kampus|akademi/i, 'sekolah / kursus', 'program dan biaya, jadwal, galeri kegiatan, dan cara mendaftar'],
   [/laundry|cuci|kiloan/i, 'laundry', 'daftar harga dan layanan, serta cara pesan jemput cucian'],
-  [/klinik|dokter|praktek|apotek|bidan|gigi/i, 'klinik', 'jadwal praktik, daftar layanan, lokasi, dan cara daftar tanpa antre'],
-  [/kursus|bimbel|\bles\b|sekolah|belajar|training/i, 'tempat kursus', 'daftar program dan biaya, jadwal kelas, dan cara daftar'],
+  [/\bshop\b|\bstore\b|butik|grosir|distro|bangunan|material|toko/i, 'toko', 'daftar produk, harga, pesan lewat WhatsApp, dan lokasi toko'],
   [/kontraktor|\bjasa\b|travel|rental|sewa|properti|agen/i, 'usaha jasa', 'daftar layanan, contoh hasil kerja, dan permintaan penawaran lewat WhatsApp'],
 ];
 
