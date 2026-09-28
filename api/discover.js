@@ -1,40 +1,43 @@
 // GET /api/discover?q=<what>&area=<area name>&lat=&lng=&r=<metres>&tile=<tile index>&max=<numbers wanted>
 //
-// Finds businesses that carry a phone number around an area using HERE
-// (discover.search.hereapi.com). The HERE key lives in the HERE_API_KEY environment
-// variable on the Vercel project and never reaches the browser.
+// Finds businesses that carry a phone number around an area using Google Places API (New):
+//   https://places.googleapis.com/v1/places:searchText
+// The Google key lives in the GOOGLE_MAPS_API_KEY environment variable on the Vercel project and
+// never reaches the browser. It is restricted to this app's own address, so every call is sent
+// with that Referer header.
 //
-// HERE's discover endpoint never returns more than 100 places, and `offset` only works
-// inside that page (offset >= limit is a 400 "Illegal input for parameter 'offset'"), so an
-// area is covered by a set of overlapping tiles instead: the middle first, then rings around
-// it. Tiles are walked until `max` numbers (default 50) are collected or the tiles run out.
+// Text Search returns at most 20 places per page and can be paged 3 times (nextPageToken), so an
+// area is covered by overlapping tiles: the middle first, then rings around it. Tiles are walked
+// until `max` numbers (default 50) are collected or the tiles run out.
 //
 // Response:
-//   { center:{lat,lng,label}, items:[{name,address,phone,km}], numbers, scanned, landline,
+//   { center:{lat,lng,label}, items:[{name,address,phone,km}], numbers, found, scanned, landline,
 //     none, more, nextTile, calls }
 //   `phone` is an Indonesian mobile in local form (08…). A place whose only number is a
 //   landline (021…) cannot open a WhatsApp chat, so it is counted (landline) instead of
 //   returned. `more`/`nextTile` continue with the tiles that were not searched yet.
 
-const GEO = 'https://geocode.search.hereapi.com/v1/geocode';
-const DISCOVER = 'https://discover.search.hereapi.com/v1/discover';
-const LIMIT = 100;          // HERE's page size = the most it will ever return for one query
-const MAX_CALLS = 8;        // hard stop: at most 8 HERE calls per search (of the 1000/day free)
+const BASE = 'https://places.googleapis.com/v1/places:searchText';
+const REFERER = process.env.APP_ORIGIN || 'https://numberlisitibf.vercel.app/';
+const FIELDS = [
+  'places.id',
+  'places.displayName',
+  'places.nationalPhoneNumber',
+  'places.internationalPhoneNumber',
+  'places.formattedAddress',
+  'places.location',
+  'nextPageToken'
+].join(',');
+const FIELDS_AREA = 'places.location,places.formattedAddress,places.displayName';
+const PAGE_SIZE = 20;       // Places caps one page at 20
+const PAGES = 3;            // ... and a text search can be paged three times
+const MAX_CALLS = 6;        // hard stop per search: 6 Google calls
 const MAX_R = 50000;
 const DEFAULT_R = 5000;
 const DEFAULT_MAX = 50;
 const HARD_MAX = 200;
 
 function digits(s) { return String(s == null ? '' : s).replace(/\D/g, ''); }
-
-// A bare name such as "Bromo" also matches places abroad (Bromo, Kentucky), so the geocoder is
-// pinned to Indonesia and the area is only widened to the whole world if that finds nothing.
-async function geocode(area, key) {
-  const base = GEO + '?q=' + encodeURIComponent(area) + '&lang=id&limit=1&apiKey=' + key;
-  let g = await getJSON(base + '&in=' + encodeURIComponent('countryCode:IDN'));
-  if (!(g.items || []).length) g = await getJSON(base);
-  return (g.items || [])[0] || null;
-}
 
 // 0812… / +62 812… / 62 812… / 812… -> 0812… (mobile) ; anything else -> ''
 function toMobile(raw) {
@@ -45,38 +48,12 @@ function toMobile(raw) {
   return /^8\d{8,11}$/.test(d) ? '0' + d : '';
 }
 
-function contactsOf(item) {
-  let mobile = '', landline = '';
-  const cs = item.contacts || [];
-  for (const c of cs) {
-    for (const p of (c.phone || [])) {
-      const m = toMobile(p.value);
-      if (m) { if (!mobile) mobile = m; }
-      else if (digits(p.value).length >= 7) { if (!landline) landline = String(p.value).trim(); }
-    }
-  }
-  return { mobile, landline };
-}
-
-async function getJSON(url) {
-  const r = await fetch(url, { headers: { accept: 'application/json' } });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) {
-    const e = new Error((j && j.title) || ('here ' + r.status));
-    e.status = r.status;
-    throw e;
-  }
-  return j;
-}
-
-// HERE returns distance only when the query was built with `at`, so the distance is measured
-// here, against the centre that was actually searched.
 function kmBetween(lat, lng, p) {
-  if (!p || !isFinite(p.lat) || !isFinite(p.lng)) return 0;
+  if (!p || !isFinite(p.latitude) || !isFinite(p.longitude)) return 0;
   const t = Math.PI / 180, R = 6371;
-  const dLat = (p.lat - lat) * t, dLng = (p.lng - lng) * t;
+  const dLat = (p.latitude - lat) * t, dLng = (p.longitude - lng) * t;
   const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat * t) * Math.cos(p.lat * t) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    Math.cos(lat * t) * Math.cos(p.latitude * t) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
   return Math.round(2 * R * Math.asin(Math.sqrt(a)) * 10) / 10;
 }
 
@@ -99,6 +76,50 @@ function tileSet(lat, lng, r) {
   return tiles;
 }
 
+// Text Search only accepts a rectangle as a restriction (a circle is SearchNearby's shape), so
+// each tile's circle is converted into its bounding box.
+function rectOf(lat, lng, r) {
+  const dLat = r / 111320;
+  const dLng = r / (111320 * Math.cos(lat * Math.PI / 180));
+  return {
+    low: { latitude: lat - dLat, longitude: lng - dLng },
+    high: { latitude: lat + dLat, longitude: lng + dLng }
+  };
+}
+
+async function callGoogle(body, fields, key) {
+  const r = await fetch(BASE, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'X-Goog-Api-Key': key,
+      'X-Goog-FieldMask': fields,
+      referer: REFERER
+    },
+    body: JSON.stringify(body)
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const msg = (j && j.error && j.error.message) || ('places ' + r.status);
+    const e = new Error(msg);
+    e.status = r.status;
+    throw e;
+  }
+  return j;
+}
+
+// The key is referrer-restricted, which the Geocoding API refuses, so the area centre comes
+// from a text search pinned to Indonesia instead.
+async function geocode(area, key) {
+  const j = await callGoogle(
+    { textQuery: area + ', Indonesia', maxResultCount: 1, languageCode: 'id' },
+    FIELDS_AREA, key
+  );
+  const p = (j.places || [])[0];
+  if (!p || !p.location) return null;
+  return { lat: p.location.latitude, lng: p.location.longitude, label: p.formattedAddress || area };
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('cache-control', 'no-store');
   const Q = req.query || {};
@@ -111,22 +132,22 @@ module.exports = async function handler(req, res) {
   max = Math.min(Math.max(max, 1), HARD_MAX);
 
   if (!q) return res.status(400).json({ error: 'Type what to look for' });
-  const key = process.env.HERE_API_KEY;
-  if (!key) return res.status(500).json({ error: 'HERE_API_KEY is not set on Vercel' });
+  const key = process.env.GOOGLE_MAPS_API_KEY;
+  if (!key) return res.status(500).json({ error: 'GOOGLE_MAPS_API_KEY is not set on Vercel' });
 
   try {
     let lat = parseFloat(Q.lat || '');
     let lng = parseFloat(Q.lng || '');
     let label = area;
 
-    // A named area is geocoded (so "Cianjur" or "Pacet, Cianjur" works); otherwise the
+    // A named area is looked up (so "Cianjur" or "Pacet, Cianjur" works); otherwise the
     // coordinates the app already has are reused.
     if (area || !isFinite(lat) || !isFinite(lng)) {
       if (!area) return res.status(400).json({ error: 'Type an area' });
       const hit = await geocode(area, key);
       if (!hit) return res.status(404).json({ error: 'Area not found: ' + area });
-      lat = hit.position.lat; lng = hit.position.lng;
-      label = (hit.address && hit.address.label) || hit.title;
+      lat = hit.lat; lng = hit.lng;
+      label = hit.label;
     }
 
     const tiles = tileSet(lat, lng, r);
@@ -136,29 +157,44 @@ module.exports = async function handler(req, res) {
     for (let t = tile; t < tiles.length; t++) {
       if (used >= MAX_CALLS) { more = true; nextTile = t; break; }   // resume here next time
       const c = tiles[t];
-      used++;
       nextTile = t + 1;
-      const d = await getJSON(DISCOVER + '?q=' + encodeURIComponent(q) +
-        '&in=' + encodeURIComponent('circle:' + c.lat + ',' + c.lng + ';r=' + c.r) +
-        '&limit=' + LIMIT + '&lang=id&apiKey=' + key);
+      let pageToken = null;
 
-      for (const i of d.items || []) {
-        const id = i.id || (i.title + '|' + (i.position && i.position.lat));
-        if (seen.has(id)) continue;                  // tiles overlap on purpose
-        seen.add(id);
-        scanned++;
-        const ct = contactsOf(i);
-        if (ct.mobile) {
-          items.push({
-            name: i.title || '',
-            address: (i.address && (i.address.label || i.address.street)) || '',
-            phone: ct.mobile,
-            km: kmBetween(lat, lng, i.position)
-          });
-        } else if (ct.landline) landline++;
-        else none++;
+      for (let page = 0; page < PAGES; page++) {
+        if (used >= MAX_CALLS) { more = true; nextTile = t; break; }
+        const body = {
+          textQuery: q,
+          languageCode: 'id',
+          maxResultCount: PAGE_SIZE,
+          rankPreference: 'DISTANCE',
+          locationRestriction: { rectangle: rectOf(c.lat, c.lng, c.r) }
+        };
+        if (pageToken) body.pageToken = pageToken;
+        used++;
+        const j = await callGoogle(body, FIELDS, key);
+
+        for (const p of j.places || []) {
+          const id = p.id || ((p.displayName && p.displayName.text) + '|' + (p.location && p.location.latitude));
+          if (seen.has(id)) continue;                  // tiles and pages overlap on purpose
+          seen.add(id);
+          scanned++;
+          const mobile = toMobile(p.nationalPhoneNumber || p.internationalPhoneNumber || '');
+          const anyPhone = digits(p.nationalPhoneNumber || p.internationalPhoneNumber || '');
+          if (mobile) {
+            items.push({
+              name: (p.displayName && p.displayName.text) || '',
+              address: p.formattedAddress || '',
+              phone: mobile,
+              km: kmBetween(lat, lng, p.location)
+            });
+          } else if (anyPhone.length >= 7) landline++;
+          else none++;
+        }
+        if (items.length >= max) { more = true; break; }
+        pageToken = j.nextPageToken || null;
+        if (!pageToken) break;
       }
-      if (items.length >= max) { more = nextTile < tiles.length; break; }
+      if (items.length >= max) break;
     }
     if (used >= MAX_CALLS && nextTile < tiles.length) more = true;
 

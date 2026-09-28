@@ -113,7 +113,7 @@ h1{font-size:20px;font-weight:640;margin:0;letter-spacing:-.02em}
 .sh-row svg{flex:none;opacity:.85}
 .sh-sub{font-size:14px;color:var(--muted);font-weight:400;margin:0 0 18px;padding:0 6px;line-height:1.4}
 
-/* find view: businesses pulled from HERE (area + keyword) with their phone numbers */
+/* find view: businesses pulled from Google Places (area + keyword) with their phone numbers */
 .fab.find{right:74px;background:var(--teal);box-shadow:0 6px 18px rgba(13,154,145,.3)}
 .fab.find:active{box-shadow:0 3px 10px rgba(13,154,145,.3)}
 .fsub{color:var(--muted);font-size:13.5px;font-weight:600;padding:0 4px 4px;margin:0}
@@ -886,7 +886,7 @@ function legacy(text, done){
 }
 
 
-/* ---------- find: HERE search for businesses with a number ---------- */
+/* ---------- find: Google Places search for businesses with a number ---------- */
 var FKEY = 'leads.find';
 var F = { area:'', q:'', r:5000, lat:null, lng:null, label:'', items:[], more:false, from:null, pick:0, busy:false };
 (function(){
@@ -966,7 +966,7 @@ function startFind(fresh){
     F.lat = j.center.lat; F.lng = j.center.lng; F.label = j.center.label; saveFind();
     F.items = F.items.concat(j.items || []);
     F.scanned = (F.scanned || 0) + (j.scanned || 0);   // places looked at, numbers or not
-    F.next = j.nextTile || 0;              // HERE caps a query at 100 places; the next tile continues
+    F.next = j.nextTile || 0;              // one tile at a time; the next tile continues the area
     F.more = !!j.more;
     renderHits();
   }, function(){ F.busy = false; sub.textContent = 'No connection'; });
