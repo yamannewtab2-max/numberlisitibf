@@ -48,6 +48,38 @@ const HARD_MAX = 200;
 
 function digits(s) { return String(s == null ? '' : s).replace(/\D/g, ''); }
 
+// One keyword only reaches part of the market: "villa" and "vila" shared just 10 of 50 numbers,
+// "penginapan" only 3. Sweeping the whole family of words for the category is the cheapest way to
+// find more businesses (each word is one more Google request, not a new area).
+const VARIANTS = [
+  [/villa|vila|penginapan|homestay|guest ?house|hotel|resort|losmen|motel/i,
+    ['villa', 'vila', 'penginapan', 'homestay', 'guest house']],
+  [/resto|restaurant|rumah makan|warung|cafe|kafe|kedai|seafood|bakery|kue|roti|makan|katering|catering/i,
+    ['rumah makan', 'restoran', 'warung', 'cafe', 'kedai']],
+  [/barber|cukur|salon|potong|spa|perawatan/i, ['barbershop', 'pangkas rambut', 'cukur rambut', 'salon']],
+  [/laundry|cuci|kiloan/i, ['laundry', 'laundry kiloan', 'cuci kiloan']],
+  [/bengkel|servis|service|motor|mobil|workshop/i, ['bengkel', 'bengkel motor', 'servis mobil', 'bengkel mobil']],
+  [/klinik|dokter|apotek|bidan|gigi|rumah sakit/i, ['klinik', 'praktik dokter', 'apotek', 'klinik gigi']],
+  [/toko|shop|bangunan|material|grosir|distro|butik|minimarket/i, ['toko', 'toko bangunan', 'toko material']],
+  [/kursus|bimbel|sekolah|school|belajar|training/i, ['kursus', 'bimbel', 'les privat', 'sekolah']],
+  [/plumber|tukang|pipa|instalasi|listrik|elektrik/i, ['tukang', 'plumber', 'tukang listrik']],
+  [/wedding|pernikahan|dekorasi|rias|organizer|tenda/i, ['dekorasi pernikahan', 'wedding organizer', 'rias pengantin']],
+  [/gym|fitness|senam|yoga|olahraga|sanggar/i, ['gym', 'fitness', 'senam', 'yoga']],
+  [/travel|rental|sewa|properti|agen|kontraktor/i, ['travel', 'rental mobil', 'sewa villa']],
+];
+
+function expandQueries(q) {
+  const out = [q];
+  for (const [re, words] of VARIANTS) {
+    if (!re.test(q)) continue;
+    for (const w of words) {
+      if (!out.some((x) => x.toLowerCase() === w.toLowerCase())) out.push(w);
+    }
+    break;
+  }
+  return out.slice(0, 5);          // five words is the budget-friendly maximum
+}
+
 // What counts as "having a website". An Instagram/WhatsApp/Linktree page is not one: the owner
 // still does not own a .com, which is exactly who this app is looking for. Only a real domain
 // (or a free-site builder that behaves like a website) takes a place out of the list.
@@ -187,50 +219,58 @@ module.exports = async function handler(req, res) {
       if (used >= callBudget) { more = true; nextTile = t; break; }   // resume here next time
       const c = tiles[t];
       nextTile = t + 1;
-      let pageToken = null;
+      // expand = one page per keyword variant in this tile (breadth, finds more businesses);
+      // otherwise the old behaviour: page deep on the single keyword.
+      const queries = P.expand ? expandQueries(q) : [q];
+      let hitMax = false;
 
-      for (let page = 0; page < PAGES; page++) {
-        if (used >= callBudget) { more = true; nextTile = t; break; }
-        const body = {
-          textQuery: q,
-          languageCode: 'id',
-          maxResultCount: PAGE_SIZE,
-          rankPreference: 'DISTANCE',
-          locationRestriction: { rectangle: rectOf(c.lat, c.lng, c.r) }
-        };
-        if (pageToken) body.pageToken = pageToken;
-        used++;
-        const j = await callGoogle(body, FIELDS, key);
+      for (let qi = 0; qi < queries.length && !hitMax; qi++) {
+        let pageToken = null;
+        const pages = P.expand ? 1 : PAGES;
 
-        for (const p of j.places || []) {
-          const id = p.id || ((p.displayName && p.displayName.text) + '|' + (p.location && p.location.latitude));
-          if (seen.has(id)) continue;                  // tiles and pages overlap on purpose
-          seen.add(id);
-          ids.push(id);                                 // handed back so the app can remember it
-          if (skip.has(id)) { again++; continue; }       // scanned in an earlier search
-          scanned++;
-          const mobile = toMobile(p.nationalPhoneNumber || p.internationalPhoneNumber || '');
-          const anyPhone = digits(p.nationalPhoneNumber || p.internationalPhoneNumber || '');
-          const kind = siteKind(p.websiteUri);
-          if (mobile && kind === 'own') { hasSite++; continue; }   // already has a real website
-          if (mobile) {
-            items.push({
-              name: (p.displayName && p.displayName.text) || '',
-              address: p.formattedAddress || '',
-              phone: mobile,
-              km: kmBetween(lat, lng, p.location),
-              lat: p.location && p.location.latitude,
-              lng: p.location && p.location.longitude,
-              site: kind                       // 'none' | 'social' (never 'own' - those are skipped)
-            });
-          } else if (anyPhone.length >= 7) landline++;
-          else none++;
+        for (let page = 0; page < pages; page++) {
+          if (used >= callBudget) { more = true; nextTile = t; break; }
+          const body = {
+            textQuery: queries[qi],
+            languageCode: 'id',
+            maxResultCount: PAGE_SIZE,
+            rankPreference: 'DISTANCE',
+            locationRestriction: { rectangle: rectOf(c.lat, c.lng, c.r) }
+          };
+          if (pageToken) body.pageToken = pageToken;
+          used++;
+          const j = await callGoogle(body, FIELDS, key);
+
+          for (const p of j.places || []) {
+            const id = p.id || ((p.displayName && p.displayName.text) + '|' + (p.location && p.location.latitude));
+            if (seen.has(id)) continue;                  // tiles, pages and words overlap on purpose
+            seen.add(id);
+            ids.push(id);                                 // handed back so the app can remember it
+            if (skip.has(id)) { again++; continue; }       // scanned in an earlier search
+            scanned++;
+            const mobile = toMobile(p.nationalPhoneNumber || p.internationalPhoneNumber || '');
+            const anyPhone = digits(p.nationalPhoneNumber || p.internationalPhoneNumber || '');
+            const kind = siteKind(p.websiteUri);
+            if (mobile && kind === 'own') { hasSite++; continue; }   // already has a real website
+            if (mobile) {
+              items.push({
+                name: (p.displayName && p.displayName.text) || '',
+                address: p.formattedAddress || '',
+                phone: mobile,
+                km: kmBetween(lat, lng, p.location),
+                lat: p.location && p.location.latitude,
+                lng: p.location && p.location.longitude,
+                site: kind                       // 'none' | 'social' (never 'own' - those are skipped)
+              });
+            } else if (anyPhone.length >= 7) landline++;
+            else none++;
+          }
+          if (items.length >= max) { more = true; hitMax = true; break; }
+          pageToken = j.nextPageToken || null;
+          if (!pageToken) break;
         }
-        if (items.length >= max) { more = true; break; }
-        pageToken = j.nextPageToken || null;
-        if (!pageToken) break;
       }
-      if (items.length >= max) break;
+      if (hitMax) break;
     }
     if (used >= callBudget && nextTile < tiles.length) more = true;
 

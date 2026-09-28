@@ -18,11 +18,11 @@ const discover = require('./discover.js');
 
 const MODEL = 'gemini-3.1-flash-lite';
 const GEMINI = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
-const AREAS_PER_RUN = 3;
-const CALLS_PER_AREA = 2;          // Google requests per area (2 x 20 = up to 40 places)
+const AREAS_PER_RUN = 2;          // locations the AI picks per run
+const CALLS_PER_AREA = 5;         // Google requests per location (one per keyword variant)
 const SWEEP_CALLS = AREAS_PER_RUN * CALLS_PER_AREA;   // hard cap for the whole run
 const AREA_RADIUS = 8000;
-const MAX_ITEMS = 60;
+const MAX_ITEMS = 200;
 const MAX_DONE = 200;              // areas kept in the memory before the oldest are dropped
 
 const PROJECT = process.env.FIREBASE_PROJECT_ID || '';
@@ -150,19 +150,24 @@ module.exports = async (req, res) => {
     // Where to look: explicit coordinates, or the area the app passed in.
     let center = { lat: lat, lng: lng, label: area };
     let firstArea = area;
+    let googleDown = false;
     if (!isFinite(lat) || !isFinite(lng)) {
       if (!area) return res.status(400).json({ error: 'Type an area' });
       const probe = await search({ q: q, area: area, r: AREA_RADIUS, max: 1, calls: 1, skip: Object.keys(mem.ids) });
       if (probe.j.error) {
-        const quota = /quota/i.test(probe.j.error);
-        return res.status(quota ? 429 : 502).json({ error: probe.j.error, quota: quota });
+        if (/quota/i.test(probe.j.error)) {
+          googleDown = true;                                 // keep going: OpenStreetMap still works
+        } else {
+          return res.status(502).json({ error: probe.j.error });
+        }
+      } else {
+        center = probe.j.center || { lat: NaN, lng: NaN, label: area };
+        firstArea = '';
       }
-      center = probe.j.center || { lat: NaN, lng: NaN, label: area };
-      firstArea = '';
     }
 
-    const areas = await pickAreas(q, center, mem.done, geminiKey);
-    const queue = (areas.length ? areas : [firstArea || area || center.label || '']).filter(Boolean);
+    const areas = googleDown ? [] : await pickAreas(q, center, mem.done, geminiKey);
+    const queue = googleDown ? [] : (areas.length ? areas : [firstArea || area || center.label || '']).filter(Boolean);
 
     const items = [];
     const searched = [];
@@ -174,7 +179,8 @@ module.exports = async (req, res) => {
       if (used >= SWEEP_CALLS) { more = true; break; }
       const a = queue[i];
       const calls = Math.min(CALLS_PER_AREA, SWEEP_CALLS - used);
-      const r = await search({ q: q, area: a, r: AREA_RADIUS, max: 40, calls: calls, skip: Object.keys(mem.ids) });
+      // expand: every keyword variant for this category (villa / vila / penginapan / homestay …)
+      const r = await search({ q: q, area: a, r: AREA_RADIUS, max: 100, calls: calls, expand: true, skip: Object.keys(mem.ids) });
       if (r.j.error) {
         if (/quota/i.test(r.j.error)) {
           more = true;
@@ -200,11 +206,11 @@ module.exports = async (req, res) => {
       if (items.length >= max) { more = true; break; }
     }
 
+
     const saved = await writeMemory(project, fbKey, mem);
     items.sort((a, b) => a.km - b.km);
     const numbers = Math.min(items.length, max);
     items.length = numbers;
-
     return res.status(200).json({
       items: items,
       numbers: numbers,
@@ -214,6 +220,7 @@ module.exports = async (req, res) => {
       ids: allIds,
       areas: searched,
       calls: used,
+      googleDown: googleDown,
       remembered: saved,
       more: more,
       done: Object.keys(mem.done).length,

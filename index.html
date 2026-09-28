@@ -1025,7 +1025,7 @@ function openFind(){
   try{ history.pushState({ v:'find' }, ''); }catch(e){}
   startFind(true);
 }
-var FIND_MAX = 50;            // numbers per search, walked until this many or the area runs out
+var FIND_MAX = 100;           // numbers per search, walked until this many or the area runs out
 function startFind(fresh){
   if(F.busy) return;
   F.busy = true;
@@ -1055,6 +1055,7 @@ function startFind(fresh){
     F.scanned = (F.scanned || 0) + (j.scanned || 0);   // places looked at, numbers or not
     F.withSite = (F.withSite || 0) + (j.withSite || 0); // skipped: they already have a website
     F.again = (F.again || 0) + (j.again || 0);          // places this app had already scanned
+    F.googleDown = !!j.googleDown;                      // Google's daily quota is spent
     F.areas = (F.areas || []).concat(j.areas || []);
     F.more = !!j.more;
     renderHits();
@@ -1067,6 +1068,7 @@ function renderHits(){
     ((F.areas && F.areas.length) ? (' · ' + F.areas.join(', ')) : '') +
     (F.withSite ? (' · ' + F.withSite + ' with website') : '') +
     (F.again ? (' · ' + F.again + ' scanned before') : '') +
+    (F.googleDown ? ' · Google quota out' : '') +
     (skipped > 0 ? (' · ' + skipped + ' no number') : '');
   box.innerHTML = F.items.map(function(h, i){
     var dup = findDup(h.phone, null);

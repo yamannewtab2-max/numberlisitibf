@@ -64,7 +64,7 @@ Tombol kaca pembesar (kiri tombol **＋**) membuka pencarian: **Area** (titik aw
 
 1. Membaca memori di Firestore (`scans/main`) — daftar tempat yang sudah pernah dipindai.
 2. Menentukan titik pusat dari area yang kamu tulis.
-3. **Gemini memilih lokasi berikutnya** — 3 kecamatan/desa di sekitar pusat yang belum pernah
+3. **Gemini memilih lokasi berikutnya** — 2 kecamatan/desa di sekitar pusat yang belum pernah
    dicari (contoh: dari Pacet → Cipanas, Sukaresmi, Cugenang).
 4. Setiap lokasi dicari lewat `api/discover.js` (Google Places Text Search), lalu disaring:
    hanya nomor HP Indonesia dan **hanya usaha yang belum punya website sendiri**.
