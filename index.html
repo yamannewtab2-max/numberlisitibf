@@ -113,6 +113,24 @@ h1{font-size:20px;font-weight:640;margin:0;letter-spacing:-.02em}
 .sh-row svg{flex:none;opacity:.85}
 .sh-sub{font-size:14px;color:var(--muted);font-weight:400;margin:0 0 18px;padding:0 6px;line-height:1.4}
 
+/* find view: businesses pulled from HERE (area + keyword) with their phone numbers */
+.fab.find{right:74px;background:var(--teal);box-shadow:0 6px 18px rgba(13,154,145,.3)}
+.fab.find:active{box-shadow:0 3px 10px rgba(13,154,145,.3)}
+.fsub{color:var(--muted);font-size:13.5px;font-weight:600;padding:0 4px 4px;margin:0}
+.view#find .list{margin-top:6px}
+.ico.add{background:var(--green);color:#fff;width:46px;height:46px;border-radius:16px}
+.ico.add.done{background:var(--card2);color:var(--green-ink)}
+.row.dim{background:#fff;box-shadow:inset 0 0 0 1.5px var(--card2);opacity:.55}
+.row.dim .bphone{color:var(--faint)}
+.chips{display:flex;gap:8px;margin:0 0 14px}
+.chip{flex:1;height:46px;border-radius:15px;background:var(--card);color:var(--muted);font-size:15px;font-weight:600;
+  transition:background .18s ease,color .18s ease,transform .12s var(--ease)}
+.chip:active{transform:scale(.96)}
+.chip.on{background:var(--teal);color:#fff}
+.morebtn{width:100%;height:50px;border-radius:16px;background:var(--card);color:var(--teal);
+  font-size:16px;font-weight:640;margin-top:12px;transition:transform .12s var(--ease)}
+.morebtn:active{transform:scale(.98)}
+
 /* toast */
 .toast{position:fixed;left:50%;bottom:calc(34px + env(safe-area-inset-bottom));transform:translate(-50%,16px);
   background:rgba(10,15,12,.92);color:#fff;font-size:14.5px;font-weight:600;padding:11px 18px;border-radius:15px;
@@ -142,6 +160,23 @@ h1{font-size:20px;font-weight:640;margin:0;letter-spacing:-.02em}
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
 </button>
 
+<button class="fab find" id="fabFind" aria-label="Find numbers">
+  <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2L21 21"/></svg>
+</button>
+
+<!-- FIND : businesses with numbers, from HERE search -->
+<main class="view" id="find">
+  <div class="top">
+    <button class="ghost" id="findBack" aria-label="Back">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <h1 class="title" id="findTitle"></h1>
+  </div>
+  <div class="fsub" id="findSub"></div>
+  <div class="list" id="hits"></div>
+  <button class="morebtn hide" id="findMore">More</button>
+</main>
+
 <div class="scrim" id="scrim"></div>
 <div class="sheet" id="sheet"></div>
 <div class="toast" id="toast"></div>
@@ -157,6 +192,7 @@ var I = {
   check:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.2 5L20 6.5"/></svg>',
   wa:'<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.347-.347.52-.52.174-.174.232-.298.347-.497.116-.198.058-.372-.03-.52-.086-.148-.66-1.59-.905-2.17-.24-.575-.48-.5-.66-.51h-.56c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.29.173-1.414-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>',
   spin:'<svg class="spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3a9 9 0 109 9" opacity=".9"/></svg>',
+  plus:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   pencil:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 00-4-4L4 16v4z"/></svg>',
   trash:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>'
 };
@@ -218,6 +254,8 @@ function show(id, back){
     v.classList.remove('on','back');
     if(v.id === id){ void v.offsetWidth; v.classList.add('on'); if(back) v.classList.add('back'); }
   }
+  var ff = document.getElementById('fabFind');
+  if(ff) ff.classList.toggle('hide', id !== 'home' && id !== 'cat');
 }
 function releaseRows(){
   // Safety net: rows animate in, but must never depend on the animation to become visible
@@ -798,6 +836,7 @@ function openTrash(){
   renderTrash();
   document.getElementById('fab').classList.add('hide');   // nothing to add in Trash
   show('cat');
+  document.getElementById('fabFind').classList.add('hide');
   try{ history.pushState({v:'trash'}, ''); }catch(e){}
 }
 document.getElementById('back').addEventListener('click', function(){ goBack(); });
@@ -813,6 +852,7 @@ function goBack(){
 }
 window.addEventListener('popstate', function(){
   if(sheetOpen){ closeSheet(); return; }
+  if(findViewOn()){ leaveFind(); return; }
   if(cur) toHome();
 });
 
@@ -845,6 +885,152 @@ function legacy(text, done){
   document.body.removeChild(ta); done();
 }
 
+
+/* ---------- find: HERE search for businesses with a number ---------- */
+var FKEY = 'leads.find';
+var F = { area:'', q:'', r:5000, lat:null, lng:null, label:'', items:[], more:false, from:null, pick:0, busy:false };
+(function(){
+  try{
+    var f = JSON.parse(localStorage.getItem(FKEY) || '{}');
+    if(!f || typeof f !== 'object') return;
+    if(f.area) F.area = f.area;
+    if(f.q) F.q = f.q;
+    if(f.r) F.r = f.r;
+    if(f.lat != null && f.lng != null){ F.lat = f.lat; F.lng = f.lng; F.label = f.label || ''; }
+  }catch(e){}
+})();
+function saveFind(){
+  try{ localStorage.setItem(FKEY, JSON.stringify({ area:F.area, q:F.q, r:F.r, lat:F.lat, lng:F.lng, label:F.label })); }catch(e){}
+}
+function findViewOn(){ return document.getElementById('find').classList.contains('on'); }
+function leaveFind(){ if(F.from && S.cats[F.from]) show('cat', true); else toHome(); }
+
+function findSheet(){
+  var radii = [1000,3000,5000,10000].map(function(r){
+    return '<button class="chip'+(r === F.r ? ' on' : '')+'" data-r="'+r+'">'+(r/1000)+' km</button>';
+  }).join('');
+  openSheet('<div class="sh-title">Find numbers</div>'+
+    '<input class="sh-input" id="fArea" placeholder="Area" autocomplete="off" enterkeyhint="next" value="'+esc(F.area)+'">'+
+    '<input class="sh-input" id="fQ" placeholder="What" autocomplete="off" enterkeyhint="done" value="'+esc(F.q)+'">'+
+    '<div class="chips">'+radii+'</div>'+
+    '<button class="sh-btn" id="fGo">Search</button>', true);
+  var areaEl = document.getElementById('fArea'), qEl = document.getElementById('fQ');
+  function bad(el, msg){
+    el.classList.add('err'); setTimeout(function(){ el.classList.remove('err'); }, 900);
+    buzz(24); if(msg) toast(msg);
+  }
+  sheetEl.querySelector('.chips').addEventListener('click', function(e){
+    var c = e.target.closest('.chip'); if(!c) return;
+    F.r = parseInt(c.getAttribute('data-r'), 10); saveFind();
+    var all = sheetEl.querySelectorAll('.chip');
+    for(var i = 0; i < all.length; i++) all[i].classList.toggle('on', all[i] === c);
+    buzz(6);
+  });
+  function go(){
+    var a = clean(areaEl.value), k = clean(qEl.value);
+    if(!k) return bad(qEl, null);
+    if(!a && F.lat == null) return bad(areaEl, 'Type an area');
+    F.area = a; F.q = k; saveFind();
+    closeSheet();
+    setTimeout(function(){ openFind(); }, 140);
+  }
+  document.getElementById('fGo').onclick = go;
+  qEl.addEventListener('keydown', function(e){ if(e.key === 'Enter') go(); });
+}
+function openFind(){
+  F.from = cur;
+  document.getElementById('findTitle').textContent = F.q;
+  document.getElementById('hits').innerHTML = '';
+  document.getElementById('findSub').textContent = 'Searching…';
+  document.getElementById('fab').classList.add('hide');
+  document.getElementById('fabFind').classList.add('hide');
+  show('find');
+  try{ history.pushState({ v:'find' }, ''); }catch(e){}
+  startFind(true);
+}
+function startFind(fresh){
+  if(F.busy) return;
+  F.busy = true;
+  if(fresh){ F.items = []; F.more = false; }
+  var sub = document.getElementById('findSub');
+  document.getElementById('findMore').classList.add('hide');
+  var url = '/api/discover?q=' + encodeURIComponent(F.q) + '&area=' + encodeURIComponent(F.area) +
+            '&r=' + F.r + '&offset=' + F.items.length +
+            (F.lat != null ? ('&lat=' + F.lat + '&lng=' + F.lng) : '');
+  fetch(url).then(function(r){ return r.json(); }).then(function(j){
+    F.busy = false;
+    if(!j || j.error){ sub.textContent = (j && j.error) ? j.error : 'Search failed'; return; }
+    F.lat = j.center.lat; F.lng = j.center.lng; F.label = j.center.label; saveFind();
+    F.items = F.items.concat(j.items || []);
+    F.more = !!j.more;
+    renderHits();
+  }, function(){ F.busy = false; sub.textContent = 'No connection'; });
+}
+function renderHits(){
+  var box = document.getElementById('hits'), sub = document.getElementById('findSub');
+  var order = F.items.map(function(h, i){ return i; }).sort(function(a, b){
+    var pa = F.items[a].phone ? 0 : 1, pb = F.items[b].phone ? 0 : 1;
+    return pa - pb || (F.items[a].km - F.items[b].km);
+  });
+  var nums = F.items.filter(function(h){ return h.phone; }).length;
+  sub.textContent = nums + ' numbers · ' + F.items.length + ' places' + (F.label ? (' · ' + F.label) : '');
+  box.innerHTML = order.map(function(i){
+    var h = F.items[i];
+    var dup = h.phone ? findDup(h.phone, null) : null;
+    var line = h.phone ? (h.phone + (h.km ? (' · ' + h.km + ' km') : ''))
+                       : (h.landline ? 'landline' : 'no number');
+    return '<div class="row'+(h.phone ? '' : ' dim')+'">'+
+      '<span class="grow"><span class="bname'+(isRTL(h.name) ? ' rtl' : '')+'">'+esc(h.name)+'</span>'+
+      '<span class="bphone num">'+esc(line)+'</span></span>'+
+      (h.phone ? '<button class="ico add'+(dup ? ' done' : '')+'" data-add="'+i+'" aria-label="Save">'+(dup ? I.check : I.plus)+'</button>' : '')+
+    '</div>';
+  }).join('') || '<div class="empty">Nothing found</div>';
+  document.getElementById('findMore').classList.toggle('hide', !F.more);
+  releaseRows();
+}
+function pickCategory(i){
+  F.pick = i;
+  var rows = S.order.map(function(id){ return S.cats[id]; }).filter(Boolean).map(function(c){
+    return '<div class="sh-row" data-pick="'+c.id+'"><span class="cname'+(isRTL(c.name) ? ' rtl' : '')+'">'+esc(c.name)+'</span></div>';
+  }).join('');
+  openSheet('<div class="sh-title">Save into</div>' + rows +
+    '<div class="sh-row" data-picknew="1">'+I.plus+'<span class="cname">'+esc(F.q)+'</span></div>');
+}
+function saveHit(i, catId){
+  var h = F.items[i], c = S.cats[catId];
+  if(!h || !c || !h.phone) return;
+  var b = { id:uid('b_'), name:h.name, phone:h.phone, categoryId:catId, createdAt:Date.now() };
+  S.biz[b.id] = b; save(); cloud.push('businesses', b);
+  renderHits(); buzz(); toast('Saved · ' + c.name);
+  genMessage(b);
+}
+function addHit(i){
+  var h = F.items[i];
+  if(!h || !h.phone) return;
+  var dup = findDup(h.phone, null);
+  if(dup){ buzz(24); toast('Already in ' + catNameOf(dup.categoryId)); renderHits(); return; }
+  if(cur && cur !== TRASH){ saveHit(i, cur); return; }
+  pickCategory(i);
+}
+document.getElementById('fabFind').addEventListener('click', function(){ buzz(8); findSheet(); });
+document.getElementById('findBack').addEventListener('click', function(){ buzz(8); history.back(); });
+document.getElementById('findMore').addEventListener('click', function(){ startFind(false); });
+document.getElementById('hits').addEventListener('click', function(e){
+  var b = e.target.closest('[data-add]');
+  if(b) addHit(parseInt(b.getAttribute('data-add'), 10));
+});
+sheetEl.addEventListener('click', function(e){
+  var p = e.target.closest('[data-pick]');
+  if(p){ var id = p.getAttribute('data-pick'); closeSheet(); saveHit(F.pick, id); return; }
+  if(e.target.closest('[data-picknew]')){
+    var i = F.pick, name = clean(F.q) || 'New';
+    var cid = uid('c_');
+    S.cats[cid] = { id:cid, name:name, createdAt:Date.now() };
+    S.order.push(cid); save(); renderHome(); cloud.push('categories', S.cats[cid]);
+    closeSheet(); saveHit(i, cid);
+  }
+});
+
 /* boot */
 tidy();
 renderHome();
@@ -873,7 +1059,7 @@ setTimeout(function(){ syncNow(true); }, 2500);   // first sync right after boot
 window.__sync = { now:syncNow, soon:syncSoon, syncing:function(){ return syncing; } };
 
 /* small debug handle */
-window.leads = { get state(){ return S; }, refresh:function(){ S = load(); renderHome(); }, waUrl:waUrl, normPhone:normPhone, validPhone:validPhone, template:template, cloud:cloud, tidy:tidy, rerender:rerender, genBacklog:genBacklog };
+window.leads = { get state(){ return S; }, find:F, openFind:openFind, findSheet:findSheet, refresh:function(){ S = load(); renderHome(); }, waUrl:waUrl, normPhone:normPhone, validPhone:validPhone, template:template, cloud:cloud, tidy:tidy, rerender:rerender, genBacklog:genBacklog };
 })();
 </script>
 </body>
