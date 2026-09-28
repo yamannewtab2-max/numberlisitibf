@@ -1,0 +1,772 @@
+{
+"areas": [
+{
+"name": "Arjasari",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Baleendah",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Banjaran",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Bojongsoang",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Cangkuang",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Cicalengka",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Cikancung",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Cilengkrang",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Cileunyi",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Cimaung",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Cimenyan",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Ciparay",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Ciwidey",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Dayeuhkolot",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Ibun",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Katapang",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Kertasari",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Kutawaringin",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Majalaya",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Margaasih",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Margahayu",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Nagreg",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Pacet",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Pameungpeuk",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Pangalengan",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Paseh",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Pasirjambu",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Rancabali",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Rancaekek",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Solokanjeruk",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Soreang",
+"regency": "Kabupaten Bandung"
+},
+{
+"name": "Batujajar",
+"regency": "Kabupaten Bandung Barat"
+},
+{
+"name": "Cihampelas",
+"regency": "Kabupaten Bandung Barat"
+},
+{
+"name": "Cikalongwetan",
+"regency": "Kabupaten Bandung Barat"
+},
+{
+"name": "Cililin",
+"regency": "Kabupaten Bandung Barat"
+},
+{
+"name": "Cipatat",
+"regency": "Kabupaten Bandung Barat"
+},
+{
+"name": "Cipeundeuy",
+"regency": "Kabupaten Bandung Barat"
+},
+{
+"name": "Cipongkor",
+"regency": "Kabupaten Bandung Barat"
+},
+{
+"name": "Cisarua",
+"regency": "Kabupaten Bandung Barat"
+},
+{
+"name": "Gununghalu",
+"regency": "Kabupaten Bandung Barat"
+},
+{
+"name": "Lembang",
+"regency": "Kabupaten Bandung Barat"
+},
+{
+"name": "Ngamprah",
+"regency": "Kabupaten Bandung Barat"
+},
+{
+"name": "Padalarang",
+"regency": "Kabupaten Bandung Barat"
+},
+{
+"name": "Parongpong",
+"regency": "Kabupaten Bandung Barat"
+},
+{
+"name": "Rongga",
+"regency": "Kabupaten Bandung Barat"
+},
+{
+"name": "Saguling",
+"regency": "Kabupaten Bandung Barat"
+},
+{
+"name": "Sindangkerta",
+"regency": "Kabupaten Bandung Barat"
+},
+{
+"name": "Babakan Madang",
+"regency": "Kabupaten Bogor",
+"lat": -6.57117,
+"lng": 106.86553
+},
+{
+"name": "Bojonggede",
+"regency": "Kabupaten Bogor",
+"lat": -6.48403,
+"lng": 106.79974
+},
+{
+"name": "Caringin",
+"regency": "Kabupaten Bogor",
+"lat": -6.70376,
+"lng": 106.82488
+},
+{
+"name": "Cariu",
+"regency": "Kabupaten Bogor",
+"lat": -6.50365,
+"lng": 107.13308
+},
+{
+"name": "Ciampea",
+"regency": "Kabupaten Bogor",
+"lat": -6.55491,
+"lng": 106.69723
+},
+{
+"name": "Ciawi",
+"regency": "Kabupaten Bogor",
+"lat": -6.66213,
+"lng": 106.85314
+},
+{
+"name": "Cibinong",
+"regency": "Kabupaten Bogor",
+"lat": -6.47277,
+"lng": 106.8533
+},
+{
+"name": "Cibungbulang",
+"regency": "Kabupaten Bogor"
+},
+{
+"name": "Cigombong",
+"regency": "Kabupaten Bogor",
+"lat": -6.74334,
+"lng": 106.8031
+},
+{
+"name": "Cigudeg",
+"regency": "Kabupaten Bogor",
+"lat": -6.54776,
+"lng": 106.53257
+},
+{
+"name": "Cijeruk",
+"regency": "Kabupaten Bogor",
+"lat": -6.69792,
+"lng": 106.79651
+},
+{
+"name": "Cileungsi",
+"regency": "Kabupaten Bogor",
+"lat": -6.39434,
+"lng": 106.97725
+},
+{
+"name": "Ciomas",
+"regency": "Kabupaten Bogor",
+"lat": -6.60258,
+"lng": 106.76531
+},
+{
+"name": "Cisarua",
+"regency": "Kabupaten Bogor",
+"lat": -6.67005,
+"lng": 106.92686
+},
+{
+"name": "Ciseeng",
+"regency": "Kabupaten Bogor"
+},
+{
+"name": "Citeureup",
+"regency": "Kabupaten Bogor",
+"lat": -6.487,
+"lng": 106.87909
+},
+{
+"name": "Dramaga",
+"regency": "Kabupaten Bogor",
+"lat": -6.57553,
+"lng": 106.73812
+},
+{
+"name": "Gunungputri",
+"regency": "Kabupaten Bogor"
+},
+{
+"name": "Gunungsindur",
+"regency": "Kabupaten Bogor"
+},
+{
+"name": "Jasinga",
+"regency": "Kabupaten Bogor",
+"lat": -6.4836,
+"lng": 106.46956
+},
+{
+"name": "Jonggol",
+"regency": "Kabupaten Bogor",
+"lat": -6.4678,
+"lng": 107.06607
+},
+{
+"name": "Kemang",
+"regency": "Kabupaten Bogor",
+"lat": -6.51298,
+"lng": 106.75519
+},
+{
+"name": "Klapanunggal",
+"regency": "Kabupaten Bogor",
+"lat": -6.44637,
+"lng": 106.94313
+},
+{
+"name": "Leuwiliang",
+"regency": "Kabupaten Bogor"
+},
+{
+"name": "Leuwisadeng",
+"regency": "Kabupaten Bogor"
+},
+{
+"name": "Megamendung",
+"regency": "Kabupaten Bogor",
+"lat": -6.67497,
+"lng": 106.88338
+},
+{
+"name": "Nanggung",
+"regency": "Kabupaten Bogor"
+},
+{
+"name": "Pamijahan",
+"regency": "Kabupaten Bogor"
+},
+{
+"name": "Parung",
+"regency": "Kabupaten Bogor",
+"lat": -6.35289,
+"lng": 106.56094
+},
+{
+"name": "Parungpanjang",
+"regency": "Kabupaten Bogor"
+},
+{
+"name": "Rancabungur",
+"regency": "Kabupaten Bogor",
+"lat": -6.51298,
+"lng": 106.75519
+},
+{
+"name": "Rumpin",
+"regency": "Kabupaten Bogor",
+"lat": -6.44191,
+"lng": 106.6405
+},
+{
+"name": "Sukajaya",
+"regency": "Kabupaten Bogor",
+"lat": -6.59421,
+"lng": 106.47805
+},
+{
+"name": "Sukamakmur",
+"regency": "Kabupaten Bogor",
+"lat": -6.56593,
+"lng": 106.99508
+},
+{
+"name": "Sukaraja",
+"regency": "Kabupaten Bogor",
+"lat": -6.54107,
+"lng": 106.82348
+},
+{
+"name": "Tajurhalang",
+"regency": "Kabupaten Bogor",
+"lat": -6.47528,
+"lng": 106.75761
+},
+{
+"name": "Tamansari",
+"regency": "Kabupaten Bogor",
+"lat": -6.64506,
+"lng": 106.76561
+},
+{
+"name": "Tanjungsari",
+"regency": "Kabupaten Bogor",
+"lat": -6.60541,
+"lng": 107.14901
+},
+{
+"name": "Tenjo",
+"regency": "Kabupaten Bogor"
+},
+{
+"name": "Tenjolaya",
+"regency": "Kabupaten Bogor"
+},
+{
+"name": "Agrabinta",
+"regency": "Kabupaten Cianjur",
+"lat": -7.38062,
+"lng": 106.88664
+},
+{
+"name": "Bonjogpicung",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Campaka",
+"regency": "Kabupaten Cianjur",
+"lat": -7.01785,
+"lng": 107.1407
+},
+{
+"name": "Campakamulya",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Cianjur",
+"regency": "Kabupaten Cianjur",
+"lat": -6.82412,
+"lng": 107.1374
+},
+{
+"name": "Cibeber",
+"regency": "Kabupaten Cianjur",
+"lat": -6.93995,
+"lng": 107.14504
+},
+{
+"name": "Cidaun",
+"regency": "Kabupaten Cianjur",
+"lat": -7.37408,
+"lng": 107.4271
+},
+{
+"name": "Cijati",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Cikadu",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Cikalongkulon",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Cilaku",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Cipanas",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Ciranjang",
+"regency": "Kabupaten Cianjur",
+"lat": -6.81403,
+"lng": 107.24746
+},
+{
+"name": "Cubinong",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Cugenang",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Gekbrong",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Haurwangi",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Kadupandak",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Karangtengah",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Leles",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Mande",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Naringgul",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Pacet",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Pagelarang",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Pasirkuda",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Sindangbarang",
+"regency": "Kabupaten Cianjur",
+"lat": -7.42384,
+"lng": 107.16292
+},
+{
+"name": "Sukaluyu",
+"regency": "Kabupaten Cianjur",
+"lat": -6.8133,
+"lng": 107.25243
+},
+{
+"name": "Sukanagara",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Sukaresmi",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Takokak",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Tanggeung",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Warungkondang",
+"regency": "Kabupaten Cianjur"
+},
+{
+"name": "Bantargadung",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Bojonggenteng",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Caringin",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Ciambar",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Cibadak",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Cibitung",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Cicantayan",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Cicurug",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Cidadap",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Cidahu",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Cidolog",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Ciemas",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Cikakak",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Cikembar",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Cikidang",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Cimanggu",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Ciracap",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Cireunghas",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Cisaat",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Cisolok",
+"regency": "Kabupaten Sukabumi",
+"lat": -6.9512,
+"lng": 106.44855
+},
+{
+"name": "Curugkembar",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Gegerbitung",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Gunungguruh",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Jampangkulon",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Jampangtengah",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Kabandungan",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Kadudampit",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Kalapanunggal",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Kalibunder",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Kebonpedes",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Lengkong",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Nagrak",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Nyalindung",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Pabuaran",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Palabuhanratu",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Parakansalak",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Parungkuda",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Purabaya",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Sagaranten",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Simpenan",
+"regency": "Kabupaten Sukabumi",
+"lat": -7.02969,
+"lng": 106.56015
+},
+{
+"name": "Sukabumi",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Sukalarang",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Sukaraja",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Surade",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Tegalbuleud",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Waluran",
+"regency": "Kabupaten Sukabumi"
+},
+{
+"name": "Warungkiara",
+"regency": "Kabupaten Sukabumi",
+"lat": -6.97453,
+"lng": 106.72475
+},
+{
+"name": "Bogor Barat",
+"regency": "Kota Bogor"
+},
+{
+"name": "Bogor Selatan",
+"regency": "Kota Bogor"
+},
+{
+"name": "Bogor Tengah",
+"regency": "Kota Bogor"
+},
+{
+"name": "Bogor Timur",
+"regency": "Kota Bogor"
+},
+{
+"name": "Bogor Utara",
+"regency": "Kota Bogor"
+},
+{
+"name": "Tanah Sareal",
+"regency": "Kota Bogor"
+}
+]
+}

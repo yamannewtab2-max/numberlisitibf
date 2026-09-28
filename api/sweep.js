@@ -124,6 +124,14 @@ function search(body) {
   });
 }
 
+function canonPhone(v){                       // 62.../8.../0... all become 0...
+  let d = String(v == null ? '' : v).replace(/\D/g, '');
+  if (d.indexOf('620') === 0) d = '62' + d.slice(3);
+  if (d.indexOf('62') === 0) d = '0' + d.slice(2);
+  else if (d.charAt(0) === '8') d = '0' + d;
+  return d;
+}
+
 module.exports = async (req, res) => {
   res.setHeader('cache-control', 'no-store');
   let body = req.body;
@@ -174,7 +182,10 @@ module.exports = async (req, res) => {
     const searched = [];
     const allIds = [];
     let used = 0, again = 0, withSite = 0, scanned = 0, more = false;
-    const seenPhones = new Set();
+    // Numbers the phone already holds: never return one of those again.
+    const seenPhones = new Set(
+      (Array.isArray(P.have) ? P.have : []).slice(0, 800).map(canonPhone).filter(Boolean)
+    );
 
     for (let i = 0; i < queue.length; i++) {
       if (used >= SWEEP_CALLS) { more = true; break; }
@@ -200,8 +211,10 @@ module.exports = async (req, res) => {
       mem.done[key] = Date.now();
       searched.push(r.j.center && r.j.center.label ? shortArea(r.j.center.label) : a);
       (r.j.items || []).forEach((it) => {
-        if (seenPhones.has(it.phone)) return;                    // one number, once
-        seenPhones.add(it.phone);
+        const pk = canonPhone(it.phone);
+        if (seenPhones.has(pk)) return;                           // one number, once
+        seenPhones.add(pk);
+        it.phone = pk;
         items.push(it);
       });
       if (items.length >= max) { more = true; break; }
@@ -226,8 +239,10 @@ module.exports = async (req, res) => {
           const out = await here.findByKeyword(q, c, AREA_RADIUS, words, hkey);
           used += out.calls;
           for (const it of out.items) {
-            if (seenPhones.has(it.phone)) continue;
-            seenPhones.add(it.phone);
+            const pk = canonPhone(it.phone);
+            if (seenPhones.has(pk)) continue;
+            seenPhones.add(pk);
+            it.phone = pk;
             items.push(it);
             hereUsed++;
           }
