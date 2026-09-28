@@ -56,6 +56,31 @@ anonymous sign-in sekali per perangkat. Artinya tiap perangkat punya uid sendiri
 pakai satu HP sebagai sumber data utama, atau pakai aturan `if true` kalau mau satu
 dataset bersama (siapa pun yang tahu project ID bisa membacanya).
 
+## Cari nomor (HERE)
+
+Tombol kaca pembesar (kiri tombol **＋**) membuka pencarian: **Area** + **What** + radius
+(1/3/5/10 km). `api/discover.js` menanyakan HERE `discover.search.hereapi.com` di sekitar
+area itu dan mengembalikan usaha yang punya nomor.
+
+- Hanya **nomor HP Indonesia** (08…) yang bisa disimpan. Nomor rumah/kantor (`021…`) tidak
+  bisa dipakai WhatsApp — barisnya tampil redup dengan label `landline`.
+- Usaha tanpa nomor juga tampil redup (`no number`) supaya kelihatan berapa yang terbuang.
+- Tombol **＋** di baris hasil menyimpan nomor itu. Dari halaman kategori, nomor masuk ke
+  kategori itu; dari Home, muncul pilihan kategori (atau kategori baru bernama kata kuncinya).
+- Nomor yang sudah pernah disimpan ditandai ✓ dan tidak bisa masuk dua kali.
+- **More** mengambil 100 hasil berikutnya.
+
+Kunci HERE hanya ada di server. Setel di Vercel:
+
+```
+HERE_API_KEY = <kunci dari platform.here.com>
+```
+
+Hasil nyata di Cianjur (radius 10 km): dari ~100 tempat per kata kunci, yang punya nomor HP
+sekitar 9–19 (restoran 9, laundry 16, barbershop 9, sekolah 19), sisanya nomor rumah/kantor
+atau tidak ada nomor. Google Places memberi nomor jauh lebih banyak, tapi butuh billing;
+HERE gratis 1.000 permintaan/hari.
+
 ## Pesan AI
 
 `api/message.js` memanggil Gemini 3.1 Flash-Lite dengan prompt pendek dan mengembalikan
@@ -71,4 +96,4 @@ browser tidak pernah melihatnya.
 
 ## Deploy
 
-Vercel, tanpa build step (`index.html` statis + `api/message.js`).
+Vercel, tanpa build step (`index.html` statis + `api/message.js` + `api/discover.js`).
