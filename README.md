@@ -17,6 +17,10 @@ Mesin kumpul prospek. Google Maps → **＋** → kategori → simpan nomor → 
 
 UI sengaja tanpa teks tambahan. Tidak ada login, catatan, peta, CRM, atau dashboard.
 
+**Satu nomor hanya sekali.** Nomor yang sudah tersimpan tidak bisa dimasukkan lagi walau
+kategorinya berbeda — saat disimpan muncul "Already in &lt;kategori&gt;" dan nomornya tidak
+ditambahkan. Format apa pun dianggap sama (0812…, +62 812…, 62 812…).
+
 ## Data
 
 - Tanpa konfigurasi: data disimpan di HP (localStorage).

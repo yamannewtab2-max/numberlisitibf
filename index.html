@@ -93,6 +93,7 @@ h1{font-size:20px;font-weight:640;margin:0;letter-spacing:-.02em}
   outline:none;margin-bottom:12px;transition:background .18s ease,box-shadow .18s ease}
 .sh-input::placeholder{color:var(--faint)}
 .sh-input:focus{background:var(--card2);box-shadow:0 0 0 2px rgba(14,196,106,.28)}
+.sh-input.err{background:#fff5f4;box-shadow:0 0 0 2px rgba(255,59,48,.38)}
 .sh-btn{width:100%;height:54px;border-radius:17px;background:var(--green);color:#fff;font-size:17px;font-weight:640;
   letter-spacing:-.01em;display:grid;place-items:center;transition:transform .14s var(--ease),background .2s ease}
 .sh-btn:active{transform:scale(.98);background:var(--green-ink)}
@@ -183,6 +184,14 @@ function esc(s){
   });
 }
 function isRTL(s){ return /[\u0600-\u06FF]/.test(s || ''); }
+// Google Maps copy-paste carries invisible RTL/LTR marks (U+200F, U+202A-U+202E, U+2066-U+2069),
+// which corrupt the display and any copy of the row. Strip them on the way in.
+function clean(s){
+  return String(s == null ? '' : s)
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 function buzz(ms){ try{ navigator.vibrate && navigator.vibrate(ms || 8); }catch(e){} }
 function toast(msg){
   var t = document.getElementById('toast');
@@ -317,8 +326,16 @@ function bizSheet(id, categoryId){
   var phEl   = document.getElementById('shPhone');
   nameEl.addEventListener('input', function(){ nameEl.classList.toggle('rtl', isRTL(nameEl.value)); });
   function go(){
-    var name = nameEl.value.trim(), phone = phEl.value.trim();
+    var name = clean(nameEl.value), phone = clean(phEl.value);
     if(!name && !phone) return;
+    var dup = phone ? findDup(phone, b ? b.id : null) : null;
+    if(dup){
+      phEl.classList.add('err');
+      setTimeout(function(){ phEl.classList.remove('err'); }, 900);
+      buzz(24);
+      toast('Already in ' + catNameOf(dup.categoryId));
+      return;
+    }
     if(b){
       b.name = name; b.phone = phone; save(); renderBiz(); cloud.push('businesses', b);
     }else{
@@ -350,6 +367,38 @@ function normPhone(raw){
   return d;
 }
 function waUrl(phone, text){ return 'https://wa.me/' + normPhone(phone) + '?text=' + encodeURIComponent(text); }
+
+/* ONE number, once — globally, even across different categories. */
+function findDup(phone, exceptId){
+  var k = normPhone(phone);
+  if(!k) return null;
+  var ids = Object.keys(S.biz);
+  for(var i = 0; i < ids.length; i++){
+    var b = S.biz[ids[i]];
+    if(b.id !== exceptId && normPhone(b.phone) === k) return b;
+  }
+  return null;
+}
+function catNameOf(id){ return (S.cats[id] && S.cats[id].name) || 'another category'; }
+// Boot repair: strip invisible marks that came with a Google Maps copy-paste, and collapse
+// duplicate numbers - the oldest entry wins. Both are written back to the cloud.
+function tidy(){
+  var dirty = false, drop = [], seen = {};
+  Object.keys(S.cats).forEach(function(id){
+    var c = S.cats[id], n = clean(c.name);
+    if(n !== c.name){ c.name = n; dirty = true; if(n) cloud.push('categories', c); }
+  });
+  Object.keys(S.biz).sort(function(a, b){ return (S.biz[a].createdAt || 0) - (S.biz[b].createdAt || 0); })
+    .forEach(function(id){
+      var b = S.biz[id], n = clean(b.name), p = clean(b.phone), k = normPhone(p);
+      if(n !== b.name || p !== b.phone){ b.name = n; b.phone = p; dirty = true; cloud.push('businesses', b); }
+      if(!k) return;
+      if(seen[k]) drop.push(id); else seen[k] = id;
+    });
+  drop.forEach(function(id){ delete S.biz[id]; cloud.drop('businesses', id); });
+  if(dirty || drop.length) save();
+  return drop.length;
+}
 
 var BENEFIT = [
   [/villa|vila|guest ?house|penginapan|homestay/i, 'villa', 'foto kamar, fasilitas, harga per malam, lokasi, dan tombol pemesanan langsung'],
@@ -646,8 +695,9 @@ function legacy(text, done){
 }
 
 /* boot */
+tidy();
 renderHome();
-cloud.pull().then(function(pulled){ if(pulled) renderHome(); cloud.flush(); });
+cloud.pull().then(function(pulled){ if(pulled){ tidy(); renderHome(); } cloud.flush(); });
 
 /* small debug handle */
 window.leads = { state:S, refresh:function(){ S = load(); renderHome(); }, waUrl:waUrl, normPhone:normPhone, template:template, cloud:cloud };
