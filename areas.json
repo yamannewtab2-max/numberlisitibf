@@ -213,14 +213,14 @@
 {
 "name": "Cipatat",
 "regency": "Kabupaten Bandung Barat",
-"lat": -6.93495,
-"lng": 107.53639
+"lat": -6.82204,
+"lng": 107.38605
 },
 {
 "name": "Cipeundeuy",
 "regency": "Kabupaten Bandung Barat",
-"lat": -6.86566,
-"lng": 107.4923
+"lat": -6.74011,
+"lng": 107.36132
 },
 {
 "name": "Cipongkor",
@@ -453,8 +453,8 @@
 {
 "name": "Parung",
 "regency": "Kabupaten Bogor",
-"lat": -6.35289,
-"lng": 106.56094
+"lat": -6.43311,
+"lng": 106.70986
 },
 {
 "name": "Parungpanjang",
@@ -543,8 +543,8 @@
 {
 "name": "Campakamulya",
 "regency": "Kabupaten Cianjur",
-"lat": -7.17431,
-"lng": 107.6031
+"lat": -7.07585,
+"lng": 107.17339
 },
 {
 "name": "Cianjur",
@@ -567,14 +567,14 @@
 {
 "name": "Cijati",
 "regency": "Kabupaten Cianjur",
-"lat": -6.92522,
-"lng": 107.75161
+"lat": -7.26044,
+"lng": 107.03494
 },
 {
 "name": "Cikadu",
 "regency": "Kabupaten Cianjur",
-"lat": -7.17431,
-"lng": 107.6031
+"lat": -7.32277,
+"lng": 107.25644
 },
 {
 "name": "Cikalongkulon",
@@ -621,8 +621,8 @@
 {
 "name": "Haurwangi",
 "regency": "Kabupaten Cianjur",
-"lat": -7.17431,
-"lng": 107.6031
+"lat": -6.82978,
+"lng": 107.31211
 },
 {
 "name": "Kadupandak",
@@ -693,8 +693,8 @@
 {
 "name": "Sukaresmi",
 "regency": "Kabupaten Cianjur",
-"lat": -6.91707,
-"lng": 106.97311
+"lat": -6.73399,
+"lng": 107.0938
 },
 {
 "name": "Takokak",
@@ -957,8 +957,8 @@
 {
 "name": "Sukabumi",
 "regency": "Kabupaten Sukabumi",
-"lat": -7.25146,
-"lng": 106.62511
+"lat": -6.98374,
+"lng": 106.87883
 },
 {
 "name": "Sukalarang",
@@ -975,8 +975,8 @@
 {
 "name": "Surade",
 "regency": "Kabupaten Sukabumi",
-"lat": -7.42316,
-"lng": 106.7191
+"lat": -7.34159,
+"lng": 106.5627
 },
 {
 "name": "Tegalbuleud",
@@ -999,14 +999,14 @@
 {
 "name": "Bogor Barat",
 "regency": "Kota Bogor",
-"lat": -6.35626,
-"lng": 106.67345
+"lat": -6.5762,
+"lng": 106.76826
 },
 {
 "name": "Bogor Selatan",
 "regency": "Kota Bogor",
-"lat": -6.35626,
-"lng": 106.67345
+"lat": -6.64229,
+"lng": 106.8077
 },
 {
 "name": "Bogor Tengah",
