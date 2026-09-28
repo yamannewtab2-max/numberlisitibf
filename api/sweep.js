@@ -194,11 +194,7 @@ module.exports = async (req, res) => {
       // expand: every keyword variant for this category (villa / vila / penginapan / homestay …)
       const r = await search({ q: q, area: a, r: AREA_RADIUS, max: 100, calls: calls, expand: true, skip: Object.keys(mem.ids) });
       if (r.j.error) {
-        if (/quota/i.test(r.j.error)) {
-          more = true;
-          if (!searched.length) return res.status(429).json({ error: r.j.error, quota: true, areas: searched });
-          break;
-        }
+        if (/quota/i.test(r.j.error)) { googleDown = true; more = true; break; }   // HERE takes over below
         continue;
       }
       used += r.j.calls || 0;
@@ -223,7 +219,6 @@ module.exports = async (req, res) => {
 
     // ---- HERE fallback: only when Google could not be used (quota / key / nothing returned) ----
     let hereUsed = 0;
-    if (!googleDown && used === 0) googleDown = true;      // Google answered but gave nothing at all
     if (googleDown) {
       const hkey = process.env.HERE_API_KEY || String(P.hereKey || '');
       if (!hkey) {
@@ -247,6 +242,9 @@ module.exports = async (req, res) => {
             hereUsed++;
           }
           if (searched.length === 0) searched.push('HERE ' + shortArea(c.label || area || q));
+          if (googleDown && hereUsed === 0 && items.length === 0) {
+            return res.status(429).json({ error: 'Google quota reached and HERE has nothing for this word here', quota: true, areas: searched });
+          }
         } catch (e) {
           if (!items.length) return res.status(502).json({ error: 'HERE: ' + String((e && e.message) || e) });
         }
