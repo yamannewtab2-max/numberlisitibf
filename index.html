@@ -352,11 +352,16 @@ function normPhone(raw){
 function waUrl(phone, text){ return 'https://wa.me/' + normPhone(phone) + '?text=' + encodeURIComponent(text); }
 
 var BENEFIT = [
-  [/villa|vila|guest ?house|penginapan|homestay/i, 'villa', 'foto-foto, kamar, fasilitas, harga, lokasi, dan tombol pemesanan'],
-  [/resto|restaurant|rumah makan|warung|cafe|kafe|kedai|bakery/i, 'restoran', 'menu, harga, foto makanan, lokasi, jam buka, dan pemesanan lewat WhatsApp'],
-  [/barber|cukur|salon|potong/i, 'barbershop', 'daftar layanan, harga, galeri hasil potongan, lokasi, jam buka, dan booking'],
-  [/hotel|resort|losmen|motel|inn/i, 'hotel', 'kamar, fasilitas, harga, lokasi, dan tombol booking langsung'],
-  [/shop|toko|store|butik|grosir|distro/i, 'toko', 'produk, harga, katalog, pemesanan lewat WhatsApp, dan lokasi']
+  [/villa|vila|guest ?house|penginapan|homestay/i, 'villa', 'foto kamar, fasilitas, harga per malam, lokasi, dan tombol pemesanan langsung'],
+  [/resto|restaurant|rumah makan|warung|cafe|kafe|kedai|bakery/i, 'restoran', 'menu dan harga sebelum datang, foto makanan, jam buka, lokasi, dan pesanan lewat WhatsApp'],
+  [/barber|cukur|salon|potong|spa/i, 'barbershop', 'daftar layanan dan harga, galeri hasil potongan, jam buka, dan booking tanpa antre'],
+  [/hotel|resort|losmen|motel|inn/i, 'hotel', 'tipe kamar dan fasilitas, harga, lokasi, dan booking langsung'],
+  [/shop|toko|store|butik|grosir|distro|bangunan|material/i, 'toko', 'katalog produk, harga, order lewat WhatsApp, dan lokasi toko'],
+  [/bengkel|servis|service|motor|mobil|workshop/i, 'bengkel', 'daftar harga jasa, jadwal servis, dan galeri hasil kerja'],
+  [/laundry|cuci|kiloan/i, 'laundry', 'daftar harga dan layanan, serta booking jadwal jemput cucian'],
+  [/klinik|dokter|praktek|apotek|bidan|gigi/i, 'klinik', 'jadwal praktik, daftar layanan, lokasi, dan booking tanpa antre'],
+  [/kursus|bimbel|les|sekolah|belajar|training/i, 'tempat kursus', 'daftar program dan biaya, jadwal kelas, dan pendaftaran online'],
+  [/kontraktor|jasa|travel|rental|sewa|properti|agen/i, 'usaha jasa', 'daftar layanan, contoh hasil kerja, dan permintaan penawaran lewat WhatsApp']
 ];
 function template(name, category){
   var t = String(category || ''), cat = t || 'usaha', benefit = 'profil usaha, foto, harga, lokasi, dan tombol WhatsApp';

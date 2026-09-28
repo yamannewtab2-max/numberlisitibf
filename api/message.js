@@ -14,11 +14,16 @@ const endpointFor = (m) => `https://generativelanguage.googleapis.com/v1beta/mod
 const LIMITS = { name: 80, category: 40 };
 
 const FALLBACK = [
-  [/villa|vila|guest ?house|penginapan|homestay/i, 'villa', 'foto-foto, kamar, fasilitas, harga, lokasi, dan tombol pemesanan'],
-  [/resto|restaurant|rumah makan|warung|cafe|kafe|kedai|bakery/i, 'restoran', 'menu, harga, foto makanan, lokasi, jam buka, dan pemesanan lewat WhatsApp'],
-  [/barber|cukur|salon|potong/i, 'barbershop', 'daftar layanan, harga, galeri hasil potongan, lokasi, jam buka, dan booking'],
-  [/hotel|resort|losmen|motel|inn/i, 'hotel', 'kamar, fasilitas, harga, lokasi, dan tombol booking langsung'],
-  [/shop|toko|store|butik|grosir|distro/i, 'toko', 'produk, harga, katalog, pemesanan lewat WhatsApp, dan lokasi'],
+  [/villa|vila|guest ?house|penginapan|homestay/i, 'villa', 'foto kamar, fasilitas, harga per malam, lokasi, dan tombol pemesanan langsung'],
+  [/resto|restaurant|rumah makan|warung|cafe|kafe|kedai|bakery/i, 'restoran', 'daftar menu dan harga, foto makanan, jam buka, lokasi, dan pesanan lewat WhatsApp'],
+  [/barber|cukur|salon|potong|spa/i, 'barbershop', 'daftar layanan dan harga, galeri hasil potongan, jam buka, dan booking tanpa antre'],
+  [/hotel|resort|losmen|motel|inn/i, 'hotel', 'tipe kamar dan fasilitas, harga, lokasi, dan booking langsung'],
+  [/shop|toko|store|butik|grosir|distro|bangunan|material/i, 'toko', 'katalog produk, harga, order lewat WhatsApp, dan lokasi toko'],
+  [/bengkel|servis|service|motor|mobil|workshop/i, 'bengkel', 'daftar harga jasa, jadwal servis, dan galeri hasil kerja'],
+  [/laundry|cuci|kiloan/i, 'laundry', 'daftar harga dan layanan, plus booking jemput cucian'],
+  [/klinik|dokter|praktek|apotek|bidan|gigi/i, 'klinik', 'jadwal praktik, daftar layanan, lokasi, dan booking tanpa antre'],
+  [/kursus|bimbel|les|sekolah|belajar|training/i, 'tempat kursus', 'daftar program dan biaya, jadwal kelas, dan pendaftaran online'],
+  [/kontraktor|jasa|service|travel|rental|sewa|properti|agen/i, 'usaha jasa', 'daftar layanan, contoh hasil kerja, dan permintaan penawaran lewat WhatsApp'],
 ];
 
 function fallback(name, category) {
@@ -34,24 +39,31 @@ function fallback(name, category) {
   );
 }
 
-const PROMPT = `Kamu menulis pesan WhatsApp pertama ke pemilik usaha kecil di Indonesia,
-setelah menemukan nomornya di Google Maps. Kamu menawarkan jasa pembuatan website profesional
-untuk usaha mereka.
+const PROMPT = `Kamu menulis pesan WhatsApp pertama ke pemilik usaha kecil di Indonesia, setelah menemukan nomornya di Google Maps. Kamu menawarkan jasa pembuatan website profesional untuk usaha mereka.
 
 Data usaha:
 - Nama usaha: {NAME}
 - Kategori: {CATEGORY}
 
+INTI PESAN: seluruh pesan harus menjual MANFAAT WEBSITE untuk usaha jenis ini. Manfaatnya harus spesifik untuk kategori itu, bukan manfaat umum.
+
+Manfaat khas per kategori (pilih 3-4 yang paling cocok, jangan campur dengan kategori lain):
+- Villa / penginapan: tamu lihat foto kamar & fasilitas, harga per malam jelas, lokasi, bisa pesan langsung tanpa lewat OTA, terlihat lebih terpercaya.
+- Restoran / warung / kafe: menu & harga terlihat sebelum datang, foto makanan bikin orang tertarik, jam buka, lokasi, pesanan/reservasi langsung masuk WhatsApp.
+- Barbershop / salon: daftar layanan & harga, galeri hasil potongan, jam buka, pelanggan bisa booking tanpa antre.
+- Hotel: tipe kamar & fasilitas, harga, lokasi, booking langsung, lebih dipercaya tamu dari luar kota.
+- Toko / barang: katalog produk, harga, order lewat WhatsApp, lokasi toko, ditemukan di Google saat orang mencari produk itu.
+- Kategori lain (bengkel, laundry, klinik, kursus, jasa, dll): pikirkan sendiri apa yang paling dicari calon pelanggan usaha semacam itu (daftar layanan, harga, jam buka, lokasi, booking/order, bukti hasil kerja), lalu pakai itu.
+
 Aturan keras:
-- Bahasa Indonesia yang natural, seperti orang Indonesia menulis chat, bukan bahasa iklan.
-- Panjang 3-4 kalimat pendek saja. Maksimal 480 karakter.
-- Sebut nama usaha sekali secara alami (kalau namanya masuk akal). Kalau nama tidak jelas, pakai kategorinya.
-- Fokus ke manfaat yang relevan dengan kategori usaha itu, bukan daftar panjang. Pilih 3-5 hal yang paling menjual untuk kategori itu (contoh: villa -> foto, kamar, fasilitas, harga, lokasi, tombol booking; restoran -> menu, harga, foto makanan, jam buka, pesan/booking lewat WhatsApp; barbershop -> layanan, harga, galeri hasil potong, jam buka, booking; hotel -> kamar, fasilitas, harga, lokasi, booking; toko -> produk, harga, katalog, order lewat WhatsApp, lokasi).
-- Tawarkan untuk membuatkan contoh/demo dulu supaya mereka bisa lihat hasilnya sebelum memutuskan.
+- Bahasa Indonesia natural seperti orang chat, bukan bahasa iklan.
+- 3-4 kalimat pendek. Maksimal 480 karakter.
+- Setiap kalimat manfaat harus menyebut keuntungan untuk pelanggan atau pemiliknya (misal "pelanggan bisa lihat menu dan harga sebelum datang"), bukan sekadar kata "website profesional".
+- Sebut nama usaha sekali secara alami. Kalau namanya tidak jelas, pakai kategorinya.
+- Tawarkan dibuatkan contoh/demo dulu supaya mereka bisa lihat hasilnya.
 - Maksimal 1 emoji, atau tidak sama sekali. Jangan pakai tanda seru berlebihan.
-- Jangan berjanji hal yang tidak bisa dipastikan (jangan bilang sudah punya pelanggan mereka, jangan mengaku dari perusahaan tertentu, jangan sebut harga).
-- Jangan mengaku sudah menghubungi mereka sebelumnya.
-- Akhiri dengan pertanyaan singkat yang mudah dijawab, atau ajakan halus — bukan perintah.
+- Jangan sebut harga jasa. Jangan menjanjikan hal yang tidak pasti (jumlah pelanggan, omzet). Jangan mengaku dari perusahaan tertentu, dan jangan mengaku sudah pernah menghubungi mereka.
+- Akhiri dengan satu pertanyaan singkat yang mudah dijawab, atau ajakan halus — bukan perintah.
 
 Balas HANYA isi pesannya. Tanpa tanda kutip, tanpa penjelasan, tanpa judul.`;
 
