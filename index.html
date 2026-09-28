@@ -103,10 +103,6 @@ h1{font-size:20px;font-weight:640;margin:0;letter-spacing:-.02em}
 .sh-input::placeholder{color:var(--faint)}
 .sh-input:focus{background:var(--card2);box-shadow:0 0 0 2px rgba(14,196,106,.28)}
 .sh-input.err{background:#fff5f4;box-shadow:0 0 0 2px rgba(255,59,48,.38)}
-.sh-sel{width:100%;border:0;background:var(--card);border-radius:16px;padding:16px;font:inherit;font-size:17px;color:var(--ink);
-  outline:none;margin-bottom:12px;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' fill='none' stroke='%230d9a91' stroke-width='2' stroke-linecap='round'/></svg>");
-  background-repeat:no-repeat;background-position:right 16px center;text-overflow:ellipsis;transition:background-color .18s ease}
-.sh-sel:focus{background-color:var(--card2);box-shadow:0 0 0 2px rgba(14,196,106,.28)}
 .sh-btn{width:100%;height:54px;border-radius:17px;background:var(--green);color:#fff;font-size:17px;font-weight:640;
   letter-spacing:-.01em;display:grid;place-items:center;transition:transform .14s var(--ease),background .2s ease}
 .sh-btn:active{transform:scale(.98);background:var(--green-ink)}
@@ -981,40 +977,6 @@ function nearbyAreas(){
   out.sort(function(a, b){ return b[1] - a[1]; });
   return out.slice(0, 8);
 }
-// Real kecamatan of West Java, geocoded once (areas.json) so a search never has to guess an area
-// and never spends a Google/HERE call on finding it.
-var AREAS = null;
-function loadAreas(cb){
-  if(AREAS){ cb(AREAS); return; }
-  try{ var c = JSON.parse(localStorage.getItem('leads.areas') || 'null');
-       if(c && c.length){ AREAS = c; cb(AREAS); return; } }catch(e){}
-  fetch('./areas.json').then(function(r){ return r.json(); }).then(function(j){
-    AREAS = (j.areas || []).filter(function(a){ return a && a.name; });
-    try{ localStorage.setItem('leads.areas', JSON.stringify(AREAS)); }catch(e){}
-    cb(AREAS);
-  }).catch(function(){ AREAS = []; cb(AREAS); });
-}
-
-// Words that actually pull businesses on Google/HERE for this kind of work.
-var HUNT = ['Villa','Vila','Penginapan','Homestay','Guest house','Hotel','Resort','Restoran','Rumah makan','Warung','Cafe','Kedai','Barbershop','Pangkas rambut','Salon','Laundry','Bengkel','Bengkel motor','Servis mobil','Klinik','Klinik gigi','Apotek','Toko','Toko bangunan','Toko material','Kursus','Bimbel','Gym','Wedding organizer','Dekorasi','Plumber','Tukang listrik','Sewa villa','Rental mobil','Travel','Properti'];
-function huntWords(){
-  var out = [], seen = {};
-  function add(n){ var k = String(n || '').toLowerCase().trim(); if(!k || seen[k]) return; seen[k] = 1; out.push(String(n).trim()); }
-  Object.keys(S.cats).forEach(function(id){ if(id !== TRASH && S.cats[id] && S.cats[id].name) add(S.cats[id].name); });
-  HUNT.forEach(add);
-  return out;
-}
-function areaOptions(){
-  var by = {}, order = [];
-  AREAS.forEach(function(a, i){
-    var r = a.regency || 'Lainnya';
-    if(!by[r]){ by[r] = []; order.push(r); }
-    by[r].push('<option value="'+i+'">'+esc(a.name)+'</option>');
-  });
-  var html = '';
-  order.forEach(function(r){ html += '<optgroup label="'+esc(r)+'">'+by[r].join('')+'</optgroup>'; });
-  return html;
-}
 function findViewOn(){ return document.getElementById('find').classList.contains('on'); }
 function leaveFind(){ if(F.from && S.cats[F.from]) show('cat', true); else toHome(); }
 
@@ -1024,32 +986,13 @@ function findSheet(){
   }).join('');
   // Opened from a category, that category names what to look for; from Home the last keyword stays.
   var pre = (cur && cur !== TRASH && S.cats[cur]) ? S.cats[cur].name : F.q;
-
   openSheet('<div class="sh-title">Find numbers</div>'+
-    '<select class="sh-sel" id="fAreaSel'+(AREAS ? '' : '" disabled')+'">'+(AREAS ? areaOptions() : '<option>Loading areas…</option>')+'</select>'+
-    '<select class="sh-sel" id="fQSel">'+huntWords().map(function(w){
-      return '<option value="'+esc(w)+'"'+(w.toLowerCase() === String(pre || '').toLowerCase() ? ' selected' : '')+'>'+esc(w)+'</option>';
-    }).join('')+'</select>'+
+    '<input class="sh-input" id="fArea" placeholder="Area" autocomplete="off" enterkeyhint="next" value="'+esc(F.area)+'">'+
+    '<input class="sh-input" id="fQ" placeholder="What" autocomplete="off" enterkeyhint="done" value="'+esc(pre)+'">'+
     '<div class="chips">'+radii+'</div>'+
     '<button class="sh-btn" id="fGo">Search</button>', true);
-
-  var areaEl = document.getElementById('fAreaSel'), qEl = document.getElementById('fQSel');
-  if(areaEl){
-    // preselect the area used last time (or the one the AI is scanning)
-    for(var i = 0; i < (AREAS || []).length; i++){
-      if((AREAS[i].name === F.area) || (S.cats[F.from] && false)){ areaEl.value = String(i); break; }
-    }
-  }
-  if(!AREAS){                                   // list still on its way: fill it when it lands
-    loadAreas(function(){
-      var el = document.getElementById('fAreaSel');
-      if(!el) return;
-      el.disabled = false; el.innerHTML = areaOptions();
-      for(var i = 0; i < (AREAS || []).length; i++){ if(AREAS[i].name === F.area){ el.value = String(i); break; } }
-    });
-  }
+  var areaEl = document.getElementById('fArea'), qEl = document.getElementById('fQ');
   function bad(el, msg){
-    if(!el) return;
     el.classList.add('err'); setTimeout(function(){ el.classList.remove('err'); }, 900);
     buzz(24); if(msg) toast(msg);
   }
@@ -1061,17 +1004,15 @@ function findSheet(){
     buzz(6);
   });
   function go(){
-    var k = clean(qEl.value);
-    var a = AREAS ? AREAS[parseInt(areaEl.value, 10)] : null;
+    var a = clean(areaEl.value), k = clean(qEl.value);
     if(!k) return bad(qEl, null);
-    if(!a){ return bad(areaEl, 'Pick an area'); }
-    F.q = k; F.area = a.name; F.region = a.regency || '';
-    if(isFinite(a.lat) && isFinite(a.lng)){ F.lat = a.lat; F.lng = a.lng; } else { F.lat = null; F.lng = null; }
-    saveFind();
+    if(!a && F.lat == null) return bad(areaEl, 'Type an area');
+    F.area = a; F.q = k; F.lat = null; F.lng = null; saveFind();
     closeSheet();
     setTimeout(function(){ openFind(); }, 140);
   }
   document.getElementById('fGo').onclick = go;
+  qEl.addEventListener('keydown', function(e){ if(e.key === 'Enter') go(); });
 }
 function openFind(){
   F.from = cur;
@@ -1094,8 +1035,6 @@ function startFind(fresh){
   var url = '/api/sweep';
   var cfg = (window.APP_CONFIG && window.APP_CONFIG.firebase) || {};
   var payload = { q:F.q, r:F.r, max:FIND_MAX, skip:scanIds() };
-  // An area picked from the list already has its coordinates: no call spent on finding them.
-  if(F.lat != null && isFinite(F.lat)){ payload.lat = F.lat; payload.lng = F.lng; payload.area = F.area; }
   // ...and every number already saved (any category, Trash included) so results are only new ones
   payload.have = Object.keys(S.biz).map(function(id){ return normPhone(S.biz[id].phone); })
     .filter(Boolean).slice(0, 800);
@@ -1173,7 +1112,6 @@ function addHit(i){
   pickCategory(i);
 }
 document.getElementById('fabFind').addEventListener('click', function(){ buzz(8); findSheet(); });
-loadAreas(function(){});   // warm the area list so the Find sheet opens complete
 document.getElementById('findBack').addEventListener('click', function(){ buzz(8); history.back(); });
 document.getElementById('findMore').addEventListener('click', function(){ startFind(false); });
 document.getElementById('hits').addEventListener('click', function(e){
