@@ -11,11 +11,15 @@
 // until `max` numbers (default 50) are collected or the tiles run out.
 //
 // Response:
-//   { center:{lat,lng,label}, items:[{name,address,phone,km}], numbers, found, scanned, landline,
-//     none, more, nextTile, calls }
+//   { center:{lat,lng,label}, items:[{name,address,phone,km,site}], numbers, found, scanned,
+//     landline, none, withSite, more, nextTile, calls }
 //   `phone` is an Indonesian mobile in local form (08…). A place whose only number is a
 //   landline (021…) cannot open a WhatsApp chat, so it is counted (landline) instead of
-//   returned. `more`/`nextTile` continue with the tiles that were not searched yet.
+//   returned.
+//   Only businesses WITHOUT their own website are returned - that is who the pitch is for. A
+//   place linked to Instagram/WhatsApp/Linktree still counts as "no website" (`site:'social'`),
+//   a real domain is dropped and counted in `withSite`. `more`/`nextTile` continue with the
+//   tiles that were not searched yet.
 
 const BASE = 'https://places.googleapis.com/v1/places:searchText';
 const REFERER = process.env.APP_ORIGIN || 'https://numberlisitibf.vercel.app/';
@@ -26,6 +30,7 @@ const FIELDS = [
   'places.internationalPhoneNumber',
   'places.formattedAddress',
   'places.location',
+  'places.websiteUri',
   'nextPageToken'
 ].join(',');
 const FIELDS_AREA = 'places.location,places.formattedAddress,places.displayName';
@@ -38,6 +43,17 @@ const DEFAULT_MAX = 50;
 const HARD_MAX = 200;
 
 function digits(s) { return String(s == null ? '' : s).replace(/\D/g, ''); }
+
+// What counts as "having a website". An Instagram/WhatsApp/Linktree page is not one: the owner
+// still does not own a .com, which is exactly who this app is looking for. Only a real domain
+// (or a free-site builder that behaves like a website) takes a place out of the list.
+const NOT_A_WEBSITE = /instagram\.com|facebook\.com|fb\.me|fb\.com|wa\.me|api\.whatsapp|whatsapp\.com|linktr\.ee|linktree|tiktok\.com|twitter\.com|\bx\.com|youtube\.com|youtu\.be|sites\.google\.com|blogspot\.|wordpress\.com|wixsite\.com|weebly|myshopify|tokopedia\.com|shopee\.co\.id|google\.com\/maps|goo\.gl|bit\.ly|s\.id|link\.in|beacons\.ai|carrd\.co|notion\.site/i;
+
+function siteKind(uri) {
+  const u = String(uri || '').trim();
+  if (!u) return 'none';                       // no link at all
+  return NOT_A_WEBSITE.test(u) ? 'social' : 'own';
+}
 
 // 0812… / +62 812… / 62 812… / 812… -> 0812… (mobile) ; anything else -> ''
 function toMobile(raw) {
@@ -152,7 +168,7 @@ module.exports = async function handler(req, res) {
 
     const tiles = tileSet(lat, lng, r);
     const items = [], seen = new Set();
-    let used = 0, scanned = 0, landline = 0, none = 0, more = false, nextTile = tile;
+    let used = 0, scanned = 0, landline = 0, none = 0, hasSite = 0, more = false, nextTile = tile;
 
     for (let t = tile; t < tiles.length; t++) {
       if (used >= MAX_CALLS) { more = true; nextTile = t; break; }   // resume here next time
@@ -180,12 +196,15 @@ module.exports = async function handler(req, res) {
           scanned++;
           const mobile = toMobile(p.nationalPhoneNumber || p.internationalPhoneNumber || '');
           const anyPhone = digits(p.nationalPhoneNumber || p.internationalPhoneNumber || '');
+          const kind = siteKind(p.websiteUri);
+          if (mobile && kind === 'own') { hasSite++; continue; }   // already has a real website
           if (mobile) {
             items.push({
               name: (p.displayName && p.displayName.text) || '',
               address: p.formattedAddress || '',
               phone: mobile,
-              km: kmBetween(lat, lng, p.location)
+              km: kmBetween(lat, lng, p.location),
+              site: kind                       // 'none' | 'social' (never 'own' - those are skipped)
             });
           } else if (anyPhone.length >= 7) landline++;
           else none++;
@@ -211,6 +230,7 @@ module.exports = async function handler(req, res) {
       scanned: scanned,
       landline: landline,
       none: none,
+      withSite: hasSite,
       more: more,
       nextTile: nextTile,
       calls: used

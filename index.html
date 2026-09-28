@@ -57,6 +57,8 @@ h1{font-size:20px;font-weight:640;margin:0;letter-spacing:-.02em}
 .bname.rtl,.sh-input.rtl{direction:rtl;text-align:right;unicode-bidi:plaintext}
 .bphone{display:block;color:var(--teal);font-size:14.5px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cnt{color:var(--teal);font-size:14px;font-weight:600;min-width:14px;text-align:right;opacity:.75}
+.tag{font-size:10.5px;font-weight:700;color:var(--teal);opacity:.7;border:1px solid var(--card2);
+  border-radius:6px;padding:0 4px;margin-left:6px;vertical-align:1px;letter-spacing:.02em}
 .empty{color:var(--teal);opacity:.6;font-size:13.5px;text-align:center;padding:70px 0}
 /* trash sits last on the home list, quieter than the categories */
 .row.trashrow{background:#fff;box-shadow:inset 0 0 0 1.5px var(--card2);margin-top:8px}
@@ -954,7 +956,7 @@ var FIND_MAX = 50;            // numbers per search, walked until this many or t
 function startFind(fresh){
   if(F.busy) return;
   F.busy = true;
-  if(fresh){ F.items = []; F.more = false; F.next = 0; F.scanned = 0; }
+  if(fresh){ F.items = []; F.more = false; F.next = 0; F.scanned = 0; F.withSite = 0; }
   var sub = document.getElementById('findSub');
   document.getElementById('findMore').classList.add('hide');
   var url = '/api/discover?q=' + encodeURIComponent(F.q) + '&area=' + encodeURIComponent(F.area) +
@@ -966,6 +968,7 @@ function startFind(fresh){
     F.lat = j.center.lat; F.lng = j.center.lng; F.label = j.center.label; saveFind();
     F.items = F.items.concat(j.items || []);
     F.scanned = (F.scanned || 0) + (j.scanned || 0);   // places looked at, numbers or not
+    F.withSite = (F.withSite || 0) + (j.withSite || 0); // skipped: they already have a website
     F.next = j.nextTile || 0;              // one tile at a time; the next tile continues the area
     F.more = !!j.more;
     renderHits();
@@ -973,13 +976,16 @@ function startFind(fresh){
 }
 function renderHits(){
   var box = document.getElementById('hits'), sub = document.getElementById('findSub');
-  var skipped = (F.scanned || 0) - F.items.length;
+  var skipped = (F.scanned || 0) - F.items.length - (F.withSite || 0);
   sub.textContent = F.items.length + ' numbers · ' + (F.scanned || F.items.length) + ' places' +
-    (F.label ? (' · ' + F.label) : '') + (skipped > 0 ? (' · ' + skipped + ' no number') : '');
+    (F.label ? (' · ' + F.label) : '') +
+    (F.withSite ? (' · ' + F.withSite + ' with website') : '') +
+    (skipped > 0 ? (' · ' + skipped + ' no number') : '');
   box.innerHTML = F.items.map(function(h, i){
     var dup = findDup(h.phone, null);
     return '<div class="row">'+
-      '<span class="grow"><span class="bname'+(isRTL(h.name) ? ' rtl' : '')+'">'+esc(h.name)+'</span>'+
+      '<span class="grow"><span class="bname'+(isRTL(h.name) ? ' rtl' : '')+'">'+esc(h.name)+
+      (h.site === 'social' ? '<span class="tag">ig</span>' : '')+'</span>'+
       '<span class="bphone num">'+esc(h.phone + (h.km ? (' · ' + h.km + ' km') : ''))+'</span></span>'+
       '<button class="ico add'+(dup ? ' done' : '')+'" data-add="'+i+'" aria-label="Save">'+(dup ? I.check : I.plus)+'</button>'+
     '</div>';

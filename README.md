@@ -63,6 +63,10 @@ Tombol kaca pembesar (kiri tombol **＋**) membuka pencarian: **Area** + **What*
 (`places.googleapis.com/v1/places:searchText`) di sekitar area itu dan mengembalikan usaha yang
 punya nomor.
 
+- **Hanya usaha yang belum punya website** yang ditampilkan — itu justru calon pembelinya. Usaha
+  yang sudah punya domain sendiri dibuang dan dihitung di baris atas (`12 with website`). Yang
+  cuma punya halaman Instagram/WhatsApp/Linktree tetap dianggap belum punya website (ditandai
+  `ig`), karena domainnya tetap milik orang lain.
 - Hanya **nomor HP Indonesia** (08…) yang bisa disimpan. Nomor rumah/kantor (`021…`) tidak
   bisa dipakai WhatsApp — barisnya tampil redup dengan label `landline`.
 - Usaha tanpa nomor juga tampil redup (`no number`) supaya kelihatan berapa yang terbuang.
