@@ -15,6 +15,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
   --bg:#fff; --ink:#0a0f0c; --muted:#9aa5a0; --faint:#c8d0cc;
+  --teal:#0d9a91;
   --card:#f6f9f7; --card2:#eef4f0;
   --green:#0ec46a; --green-ink:#08a457; --wa:#25d366; --danger:#ff3b30;
   --r:20px; --ease:cubic-bezier(.22,1,.36,1);
@@ -53,14 +54,14 @@ h1{font-size:20px;font-weight:640;margin:0;letter-spacing:-.02em}
 .cname{font-size:17px;font-weight:600;letter-spacing:-.01em;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bname{font-size:17px;font-weight:600;letter-spacing:-.01em;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bname.rtl,.sh-input.rtl{direction:rtl;text-align:right;unicode-bidi:plaintext}
-.bphone{display:block;color:var(--muted);font-size:14.5px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cnt{color:var(--faint);font-size:14px;font-weight:600;min-width:14px;text-align:right}
-.empty{color:var(--faint);font-size:13.5px;text-align:center;padding:70px 0}
+.bphone{display:block;color:var(--teal);font-size:14.5px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cnt{color:var(--teal);font-size:14px;font-weight:600;min-width:14px;text-align:right;opacity:.75}
+.empty{color:var(--teal);opacity:.6;font-size:13.5px;text-align:center;padding:70px 0}
 /* trash sits last on the home list, quieter than the categories */
 .row.trashrow{background:#fff;box-shadow:inset 0 0 0 1.5px var(--card2);margin-top:8px}
 .row.trashrow:active{background:var(--card)}
-.trashlabel{display:flex;align-items:center;gap:11px;color:var(--muted)}
-.trashlabel .cname{color:var(--muted);font-weight:600}
+.trashlabel{display:flex;align-items:center;gap:11px;color:var(--teal)}
+.trashlabel .cname{color:var(--teal);font-weight:600}
 
 /* icon buttons */
 .ico{width:38px;height:38px;border-radius:13px;display:grid;place-items:center;flex:none;
@@ -93,7 +94,7 @@ h1{font-size:20px;font-weight:640;margin:0;letter-spacing:-.02em}
 .sheet.on{transform:none}
 .grab{width:38px;height:4px;border-radius:3px;background:var(--faint);margin:4px auto 14px}
 .sh-title{font-size:17px;font-weight:640;letter-spacing:-.02em;margin:2px 0 14px}
-.sh-label{font-size:12.5px;color:var(--muted);margin:0 0 6px 4px;font-weight:600;letter-spacing:.01em}
+.sh-label{font-size:12.5px;color:var(--teal);margin:0 0 6px 4px;font-weight:600;letter-spacing:.01em}
 .sh-input{width:100%;border:0;background:var(--card);border-radius:16px;padding:16px;font:inherit;font-size:17px;color:var(--ink);
   outline:none;margin-bottom:12px;transition:background .18s ease,box-shadow .18s ease}
 .sh-input::placeholder{color:var(--faint)}
@@ -280,6 +281,7 @@ function closeSheet(){
   sheetOpen = false;
   sheetEl.classList.remove('on'); scrim.classList.remove('on');
   setTimeout(function(){ if(!sheetOpen) sheetEl.innerHTML = ''; }, 340);
+  syncSoon();
 }
 scrim.addEventListener('click', closeSheet);
 
@@ -584,7 +586,9 @@ var cloud = (function(){
       ? api('/' + op.col + '/' + op.id, { method:'DELETE' })
       : api(nameOf(op.col, op.id), { method:'PATCH', body:JSON.stringify(enc(op.doc)) });
     return Promise.resolve(p).then(function(){
-      var cur = qget(); cur.shift(); qset(cur); flushing = false; return flush();
+      var cur = qget(); cur.shift(); qset(cur); flushing = false;
+      syncSoon();                     // our write landed - pull what other devices did meanwhile
+      return flush();
     }, function(){
       flushing = false;      // still queued - retried on the next boot or reconnect
     });
@@ -746,10 +750,29 @@ function legacy(text, done){
 /* boot */
 tidy();
 renderHome();
-cloud.pull().then(function(pulled){ if(pulled){ tidy(); renderHome(); } cloud.flush(); });
+cloud.pull().then(function(pulled){ if(pulled){ tidy(); rerender(); } cloud.flush(); });
+
+/* keep every device on the cloud's version - the cloud is the truth, the phone is a cache */
+var syncing = false, syncTimer = null;
+function syncNow(){
+  if(!cloud.on() || syncing || sheetOpen || document.hidden) return;
+  syncing = true;
+  Promise.resolve(cloud.flush())
+    .then(function(){ return cloud.pull(); })
+    .then(function(pulled){
+      syncing = false;
+      if(pulled){ tidy(); rerender(); }
+    }, function(){ syncing = false; });
+}
+function syncSoon(){ clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 500); }
+setInterval(syncNow, 20000);                                             // while the app is open
+document.addEventListener('visibilitychange', function(){ if(!document.hidden) syncSoon(); });
+window.addEventListener('focus', syncSoon);
+window.addEventListener('online', function(){ cloud.flush(); syncSoon(); });
+window.__sync = { now:syncNow, soon:syncSoon, syncing:function(){ return syncing; } };
 
 /* small debug handle */
-window.leads = { state:S, refresh:function(){ S = load(); renderHome(); }, waUrl:waUrl, normPhone:normPhone, template:template, cloud:cloud };
+window.leads = { get state(){ return S; }, refresh:function(){ S = load(); renderHome(); }, waUrl:waUrl, normPhone:normPhone, template:template, cloud:cloud, tidy:tidy, rerender:rerender };
 })();
 </script>
 </body>
