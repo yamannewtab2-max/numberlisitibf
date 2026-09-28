@@ -5,8 +5,8 @@
 // If the key is missing (or Gemini fails), a built-in Indonesian template is
 // returned instead, so the WhatsApp flow always works.
 
-const MODEL = 'gemini-2.5-flash-lite';
-const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+const MODELS = ['gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-flash-lite-latest'];
+const endpointFor = (m) => `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
 
 const LIMITS = { name: 80, category: 40 };
 
@@ -78,37 +78,37 @@ module.exports = async (req, res) => {
 
   const prompt = PROMPT.replace('{NAME}', name || '-').replace('{CATEGORY}', category || '-');
 
-  try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 8000);
-    const r = await fetch(ENDPOINT, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-      signal: ctrl.signal,
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.9,
-          topP: 0.95,
-          maxOutputTokens: 400,
-          thinkingConfig: { thinkingBudget: 0 },
-        },
-      }),
-    });
-    clearTimeout(timer);
+  for (const model of MODELS) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 8000);
+      const r = await fetch(endpointFor(model), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+        signal: ctrl.signal,
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.9,
+            topP: 0.95,
+            maxOutputTokens: 400,
+          },
+        }),
+      });
+      clearTimeout(timer);
 
-    const j = await r.json();
-    const parts = (((j.candidates || [])[0] || {}).content || {}).parts || [];
-    let text = parts.map((p) => p.text || '').join('').trim();
+      const j = await r.json();
+      const parts = (((j.candidates || [])[0] || {}).content || {}).parts || [];
+      let text = parts.map((p) => p.text || '').join('').trim();
 
-    text = text.replace(/^```[a-z]*\s*/i, '').replace(/```$/,'').replace(/^["'“”]+|["'“”]+$/g, '').trim();
+      text = text.replace(/^```[a-z]*\s*/i, '').replace(/```$/,'').replace(/^["'“”]+|["'“”]+$/g, '').trim();
 
-    if (!text || text.length > 700) {
-      res.status(200).json({ ok: true, source: 'template', message: fallback(name, category) });
+      if (!text || text.length > 700) continue;   // retired model or odd reply -> next model, then template
+      res.status(200).json({ ok: true, source: 'gemini', model, message: text });
       return;
+    } catch (e) {
+      // try the next model
     }
-    res.status(200).json({ ok: true, source: 'gemini', message: text });
-  } catch (e) {
-    res.status(200).json({ ok: true, source: 'template', message: fallback(name, category) });
   }
+  res.status(200).json({ ok: true, source: 'template', message: fallback(name, category) });
 };
