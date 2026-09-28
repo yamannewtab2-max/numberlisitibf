@@ -12,14 +12,17 @@
 //
 // Response:
 //   { center:{lat,lng,label}, items:[{name,address,phone,km,site}], numbers, found, scanned,
-//     landline, none, withSite, more, nextTile, calls }
+//     again, ids, landline, none, withSite, more, nextTile, calls }
 //   `phone` is an Indonesian mobile in local form (08…). A place whose only number is a
 //   landline (021…) cannot open a WhatsApp chat, so it is counted (landline) instead of
 //   returned.
 //   Only businesses WITHOUT their own website are returned - that is who the pitch is for. A
 //   place linked to Instagram/WhatsApp/Linktree still counts as "no website" (`site:'social'`),
-//   a real domain is dropped and counted in `withSite`. `more`/`nextTile` continue with the
-//   tiles that were not searched yet.
+//   a real domain is dropped and counted in `withSite`.
+//   POST the ids the app has already seen as `skip` (JSON body) and they come back counted in
+//   `again` instead of `scanned`; `ids` returns every place id this request touched so the app
+//   can remember them (phone or no phone) and never scan that place twice.
+//   `more`/`nextTile` continue with the tiles that were not searched yet.
 
 const BASE = 'https://places.googleapis.com/v1/places:searchText';
 const REFERER = process.env.APP_ORIGIN || 'https://numberlisitibf.vercel.app/';
@@ -37,6 +40,7 @@ const FIELDS_AREA = 'places.location,places.formattedAddress,places.displayName'
 const PAGE_SIZE = 20;       // Places caps one page at 20
 const PAGES = 3;            // ... and a text search can be paged three times
 const MAX_CALLS = 6;        // hard stop per search: 6 Google calls
+const MAX_SKIP = 20000;     // ids the client may send as "already scanned"
 const MAX_R = 50000;
 const DEFAULT_R = 5000;
 const DEFAULT_MAX = 50;
@@ -138,22 +142,31 @@ async function geocode(area, key) {
 
 module.exports = async function handler(req, res) {
   res.setHeader('cache-control', 'no-store');
-  const Q = req.query || {};
-  const q = String(Q.q || '').trim().slice(0, 80);
-  const area = String(Q.area || '').trim().slice(0, 80);
-  const tile = Math.max(0, parseInt(Q.tile || '0', 10) || 0);
-  let r = parseInt(Q.r || String(DEFAULT_R), 10) || DEFAULT_R;
+  let body = req.body;
+  if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = null; } }
+  if (!body || typeof body !== 'object') body = {};
+  const P = Object.assign({}, req.query || {}, body);
+
+  const q = String(P.q || '').trim().slice(0, 80);
+  const area = String(P.area || '').trim().slice(0, 80);
+  const tile = Math.max(0, parseInt(P.tile || '0', 10) || 0);
+  let r = parseInt(P.r || String(DEFAULT_R), 10) || DEFAULT_R;
   r = Math.min(Math.max(r, 500), MAX_R);
-  let max = parseInt(Q.max || String(DEFAULT_MAX), 10) || DEFAULT_MAX;
+  let max = parseInt(P.max || String(DEFAULT_MAX), 10) || DEFAULT_MAX;
   max = Math.min(Math.max(max, 1), HARD_MAX);
+  // Places this app already looked at (any earlier search, any device): never hand them back
+  // and never count them again.
+  const skip = new Set((Array.isArray(P.skip) ? P.skip : []).slice(0, MAX_SKIP).map(String));
+  // How many Google requests this call may spend (the sweep orchestrator budgets a whole run).
+  const callBudget = Math.min(Math.max(parseInt(P.calls || String(MAX_CALLS), 10) || MAX_CALLS, 1), MAX_CALLS);
 
   if (!q) return res.status(400).json({ error: 'Type what to look for' });
   const key = process.env.GOOGLE_MAPS_API_KEY;
   if (!key) return res.status(500).json({ error: 'GOOGLE_MAPS_API_KEY is not set on Vercel' });
 
   try {
-    let lat = parseFloat(Q.lat || '');
-    let lng = parseFloat(Q.lng || '');
+    let lat = parseFloat(P.lat || '');
+    let lng = parseFloat(P.lng || '');
     let label = area;
 
     // A named area is looked up (so "Cianjur" or "Pacet, Cianjur" works); otherwise the
@@ -167,17 +180,17 @@ module.exports = async function handler(req, res) {
     }
 
     const tiles = tileSet(lat, lng, r);
-    const items = [], seen = new Set();
-    let used = 0, scanned = 0, landline = 0, none = 0, hasSite = 0, more = false, nextTile = tile;
+    const items = [], seen = new Set(), ids = [];
+    let used = 0, scanned = 0, landline = 0, none = 0, hasSite = 0, again = 0, more = false, nextTile = tile;
 
     for (let t = tile; t < tiles.length; t++) {
-      if (used >= MAX_CALLS) { more = true; nextTile = t; break; }   // resume here next time
+      if (used >= callBudget) { more = true; nextTile = t; break; }   // resume here next time
       const c = tiles[t];
       nextTile = t + 1;
       let pageToken = null;
 
       for (let page = 0; page < PAGES; page++) {
-        if (used >= MAX_CALLS) { more = true; nextTile = t; break; }
+        if (used >= callBudget) { more = true; nextTile = t; break; }
         const body = {
           textQuery: q,
           languageCode: 'id',
@@ -193,6 +206,8 @@ module.exports = async function handler(req, res) {
           const id = p.id || ((p.displayName && p.displayName.text) + '|' + (p.location && p.location.latitude));
           if (seen.has(id)) continue;                  // tiles and pages overlap on purpose
           seen.add(id);
+          ids.push(id);                                 // handed back so the app can remember it
+          if (skip.has(id)) { again++; continue; }       // scanned in an earlier search
           scanned++;
           const mobile = toMobile(p.nationalPhoneNumber || p.internationalPhoneNumber || '');
           const anyPhone = digits(p.nationalPhoneNumber || p.internationalPhoneNumber || '');
@@ -204,6 +219,8 @@ module.exports = async function handler(req, res) {
               address: p.formattedAddress || '',
               phone: mobile,
               km: kmBetween(lat, lng, p.location),
+              lat: p.location && p.location.latitude,
+              lng: p.location && p.location.longitude,
               site: kind                       // 'none' | 'social' (never 'own' - those are skipped)
             });
           } else if (anyPhone.length >= 7) landline++;
@@ -215,7 +232,7 @@ module.exports = async function handler(req, res) {
       }
       if (items.length >= max) break;
     }
-    if (used >= MAX_CALLS && nextTile < tiles.length) more = true;
+    if (used >= callBudget && nextTile < tiles.length) more = true;
 
     items.sort(function (a, b) { return a.km - b.km; });
     const found = items.length;                     // callable numbers seen while walking
@@ -228,6 +245,8 @@ module.exports = async function handler(req, res) {
       numbers: numbers,
       found: found,
       scanned: scanned,
+      again: again,
+      ids: ids,
       landline: landline,
       none: none,
       withSite: hasSite,

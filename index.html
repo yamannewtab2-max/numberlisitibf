@@ -699,7 +699,9 @@ var cloud = (function(){
   }
   function idOf(name){ return String(name).split('/').pop(); }
   function nameOf(col, id){
-    var fields = (col === 'categories') ? ['id','name','createdAt'] : ['id','name','phone','categoryId','createdAt','movedAt','msg','msgv'];
+    var fields = (col === 'categories') ? ['id','name','createdAt']
+      : (col === 'scans') ? ['id','blob']
+      : ['id','name','phone','categoryId','createdAt','movedAt','msg','msgv'];
     return '/' + col + '/' + id + '?' + fields.map(function(f){ return 'updateMask.fieldPaths=' + f; }).join('&');
   }
 
@@ -712,7 +714,10 @@ var cloud = (function(){
 
   function enqueue(op){
     if(!on) return;
-    var a = qget(); a.push(op); qset(a); flush();
+    var a = qget();
+    a.push(op);
+    if(a.length > 80) a = a.slice(a.length - 80);   // never let one stuck write grow forever
+    qset(a); flush();
   }
   function flush(){
     if(!on || flushing) return Promise.resolve();
@@ -740,8 +745,10 @@ var cloud = (function(){
     push: function(col, obj){
       var doc = (col === 'categories')
         ? { id:obj.id, name:obj.name, createdAt:obj.createdAt }
+        : (col === 'scans')
+        ? { id:'main', blob:String(obj.blob || '') }        // one doc: which places were scanned
         : { id:obj.id, name:obj.name, phone:obj.phone, categoryId:obj.categoryId, createdAt:obj.createdAt, movedAt:obj.movedAt || 0, msg:obj.msg || '', msgv:obj.msgv || 0 };
-      enqueue({ col:col, id:obj.id, doc:doc });
+      enqueue({ col:col, id:(col === 'scans' ? 'main' : obj.id), doc:doc });
     },
     drop: function(col, id){
       enqueue({ col:col, id:id, del:true });
@@ -755,6 +762,13 @@ var cloud = (function(){
         return api('/businesses');
       }).then(function(k){
         (k.documents || []).forEach(function(d){ var b = dec(d); b.id = idOf(d.name); biz[b.id] = b; });
+        return api('/scans');
+      }).then(function(sc){
+        // the scanned-places memory, shared by every device
+        (sc.documents || []).forEach(function(d){
+          var s = dec(d);
+          if(idOf(d.name) === 'main' && s.blob) scanMerge(s.blob);
+        });
         // Keep anything still waiting in the outbox (collected offline) visible, and keep
         // a queued delete from being resurrected by the server copy.
         qget().forEach(function(op){
@@ -904,6 +918,65 @@ var F = { area:'', q:'', r:5000, lat:null, lng:null, label:'', items:[], more:fa
 function saveFind(){
   try{ localStorage.setItem(FKEY, JSON.stringify({ area:F.area, q:F.q, r:F.r, lat:F.lat, lng:F.lng, label:F.label })); }catch(e){}
 }
+
+/* Every Google place this app has looked at, so no area is scanned twice. Kept on the phone and
+   mirrored to Firestore (`scans/main`) so both devices share one memory. */
+var SKEY = 'leads.scanned.v1';
+var SCAN = { ids:{}, near:{}, done:{} };
+(function(){
+  try{
+    var s = JSON.parse(localStorage.getItem(SKEY) || '{}');
+    if(!s || typeof s !== 'object') return;
+    SCAN.ids = (s.ids && typeof s.ids === 'object') ? s.ids : {};
+    SCAN.near = (s.near && typeof s.near === 'object') ? s.near : {};
+    SCAN.done = (s.done && typeof s.done === 'object') ? s.done : {};
+  }catch(e){}
+})();
+function saveScan(){
+  var keys = Object.keys(SCAN.ids);
+  if(keys.length > 12000){                                  // keep the doc well under Firestore's limit
+    var drop = keys.slice(0, keys.length - 12000);
+    for(var i = 0; i < drop.length; i++) delete SCAN.ids[drop[i]];
+  }
+  try{ localStorage.setItem(SKEY, JSON.stringify(SCAN)); }catch(e){}
+}
+function scanIds(){ return Object.keys(SCAN.ids); }
+// The kecamatan an address belongs to ("…, Kec. Pacet, Kabupaten Cianjur, …" -> "Pacet").
+function areaOf(addr){
+  var m = /Kec\.?\s*([A-Za-z'\u00C0-\u024F][A-Za-z'\u00C0-\u024F .]{2,22})(?:,|$)/.exec(String(addr || ''));
+  return m ? m[1].trim() : '';
+}
+function scanRemember(list, items, areaLabel){
+  var fresh = 0;
+  (list || []).forEach(function(id){ if(id && !SCAN.ids[id]){ SCAN.ids[id] = 1; fresh++; } });
+  (items || []).forEach(function(it){
+    var a = areaOf(it.address);
+    if(a) SCAN.near[a] = Date.now();
+  });
+  if(areaLabel) SCAN.done[areaLabel] = Date.now();
+  saveScan();
+  cloud.push('scans', { blob: JSON.stringify(SCAN) });
+  return fresh;
+}
+function scanMerge(blob){
+  try{
+    var s = JSON.parse(blob || '{}');
+    Object.keys(s.ids || {}).forEach(function(k){ SCAN.ids[k] = 1; });
+    Object.keys(s.near || {}).forEach(function(k){ SCAN.near[k] = Math.max(SCAN.near[k] || 0, s.near[k] || 0); });
+    Object.keys(s.done || {}).forEach(function(k){ if(!SCAN.done[k]) SCAN.done[k] = s.done[k]; });
+    saveScan();
+  }catch(e){}
+}
+// Kecamatan seen in the results but never searched on their own: the "locations nearby" list.
+function nearbyAreas(){
+  var out = [];
+  Object.keys(SCAN.near).forEach(function(name){
+    var done = Object.keys(SCAN.done).some(function(a){ return a.toLowerCase().indexOf(name.toLowerCase()) >= 0; });
+    if(!done) out.push([name, SCAN.near[name]]);
+  });
+  out.sort(function(a, b){ return b[1] - a[1]; });
+  return out.slice(0, 8);
+}
 function findViewOn(){ return document.getElementById('find').classList.contains('on'); }
 function leaveFind(){ if(F.from && S.cats[F.from]) show('cat', true); else toHome(); }
 
@@ -926,7 +999,7 @@ function findSheet(){
   sheetEl.querySelector('.chips').addEventListener('click', function(e){
     var c = e.target.closest('.chip'); if(!c) return;
     F.r = parseInt(c.getAttribute('data-r'), 10); saveFind();
-    var all = sheetEl.querySelectorAll('.chip');
+    var all = sheetEl.querySelectorAll('.chips .chip');
     for(var i = 0; i < all.length; i++) all[i].classList.toggle('on', all[i] === c);
     buzz(6);
   });
@@ -956,20 +1029,33 @@ var FIND_MAX = 50;            // numbers per search, walked until this many or t
 function startFind(fresh){
   if(F.busy) return;
   F.busy = true;
-  if(fresh){ F.items = []; F.more = false; F.next = 0; F.scanned = 0; F.withSite = 0; }
+  if(fresh){ F.items = []; F.more = false; F.next = 0; F.scanned = 0; F.withSite = 0; F.again = 0; F.areas = []; }
   var sub = document.getElementById('findSub');
   document.getElementById('findMore').classList.add('hide');
-  var url = '/api/discover?q=' + encodeURIComponent(F.q) + '&area=' + encodeURIComponent(F.area) +
-            '&r=' + F.r + '&tile=' + (F.next || 0) + '&max=' + FIND_MAX +
-            (F.lat != null ? ('&lat=' + F.lat + '&lng=' + F.lng) : '');
-  fetch(url).then(function(r){ return r.json(); }).then(function(j){
+  var url = '/api/sweep';
+  var cfg = (window.APP_CONFIG && window.APP_CONFIG.firebase) || {};
+  var payload = { q:F.q, r:F.r, max:FIND_MAX, skip:scanIds() };
+  if(F.area) payload.area = F.area;
+  if(F.lat != null){ payload.lat = F.lat; payload.lng = F.lng; }
+  if(cfg.projectId) payload.projectId = cfg.projectId;      // where the scan memory lives
+  if(cfg.apiKey) payload.firebaseKey = cfg.apiKey;
+  fetch(url, { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(payload) })
+    .then(function(r){ return r.json(); }).then(function(j){
     F.busy = false;
-    if(!j || j.error){ sub.textContent = (j && j.error) ? j.error : 'Search failed'; return; }
-    F.lat = j.center.lat; F.lng = j.center.lng; F.label = j.center.label; saveFind();
+    if(!j || j.error){
+      sub.textContent = (j && j.quota) ? 'Google daily limit reached — try again later' : ((j && j.error) || 'Search failed');
+      return;
+    }
+    if(j.items && j.items.length && !F.lat){
+      var first = j.items[0];
+      if(first && first.lat){ F.lat = first.lat; F.lng = first.lng; }
+    }
+    scanRemember(j.ids, j.items, null);                // this ground is covered now
     F.items = F.items.concat(j.items || []);
     F.scanned = (F.scanned || 0) + (j.scanned || 0);   // places looked at, numbers or not
     F.withSite = (F.withSite || 0) + (j.withSite || 0); // skipped: they already have a website
-    F.next = j.nextTile || 0;              // one tile at a time; the next tile continues the area
+    F.again = (F.again || 0) + (j.again || 0);          // places this app had already scanned
+    F.areas = (F.areas || []).concat(j.areas || []);
     F.more = !!j.more;
     renderHits();
   }, function(){ F.busy = false; sub.textContent = 'No connection'; });
@@ -977,9 +1063,10 @@ function startFind(fresh){
 function renderHits(){
   var box = document.getElementById('hits'), sub = document.getElementById('findSub');
   var skipped = (F.scanned || 0) - F.items.length - (F.withSite || 0);
-  sub.textContent = F.items.length + ' numbers · ' + (F.scanned || F.items.length) + ' places' +
-    (F.label ? (' · ' + F.label) : '') +
+  sub.textContent = F.items.length + ' numbers' +
+    ((F.areas && F.areas.length) ? (' · ' + F.areas.join(', ')) : '') +
     (F.withSite ? (' · ' + F.withSite + ' with website') : '') +
+    (F.again ? (' · ' + F.again + ' scanned before') : '') +
     (skipped > 0 ? (' · ' + skipped + ' no number') : '');
   box.innerHTML = F.items.map(function(h, i){
     var dup = findDup(h.phone, null);

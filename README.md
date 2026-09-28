@@ -56,47 +56,45 @@ anonymous sign-in sekali per perangkat. Artinya tiap perangkat punya uid sendiri
 pakai satu HP sebagai sumber data utama, atau pakai aturan `if true` kalau mau satu
 dataset bersama (siapa pun yang tahu project ID bisa membacanya).
 
-## Cari nomor (Google Maps)
+## Cari nomor (Google Maps + AI)
 
-Tombol kaca pembesar (kiri tombol **＋**) membuka pencarian: **Area** + **What** + radius
-(1/3/5/10 km). `api/discover.js` menanyakan **Google Places API (New)**
-(`places.googleapis.com/v1/places:searchText`) di sekitar area itu dan mengembalikan usaha yang
-punya nomor.
+Tombol kaca pembesar (kiri tombol **＋**) membuka pencarian: **Area** (titik awal) + **What**
+(kata kunci, otomatis terisi dari kategori) + radius. Satu kali tekan Search menjalankan
+`api/sweep.js`:
 
-- **Hanya usaha yang belum punya website** yang ditampilkan — itu justru calon pembelinya. Usaha
-  yang sudah punya domain sendiri dibuang dan dihitung di baris atas (`12 with website`). Yang
-  cuma punya halaman Instagram/WhatsApp/Linktree tetap dianggap belum punya website (ditandai
-  `ig`), karena domainnya tetap milik orang lain.
-- Hanya **nomor HP Indonesia** (08…) yang bisa disimpan. Nomor rumah/kantor (`021…`) tidak
-  bisa dipakai WhatsApp — barisnya tampil redup dengan label `landline`.
-- Usaha tanpa nomor juga tampil redup (`no number`) supaya kelihatan berapa yang terbuang.
-- Tombol **＋** di baris hasil menyimpan nomor itu. Dari halaman kategori, nomor masuk ke
-  kategori itu; dari Home, muncul pilihan kategori (atau kategori baru bernama kata kuncinya).
-- Nomor yang sudah pernah disimpan ditandai ✓ dan tidak bisa masuk dua kali.
-- Satu pencarian mengumpulkan **50 nomor** (bukan 50 tempat mentah): `api/discover.js` menyapu
-  area itu sampai 50 nomor HP terkumpul atau area habis, lalu hanya menampilkan yang bisa
-  di-WhatsApp. Baris atas menunjukkan hasilnya: `50 numbers · 200 places · 150 no number`.
-- **More** melanjutkan area berikutnya (50 nomor lagi). Satu halaman Google berisi 20 tempat dan
-  bisa dilanjutkan 3 halaman, jadi area ditutup dengan beberapa kotak tumpang-tindih (tengah
-  dulu, lalu cincin di sekelilingnya) — maksimal 6 permintaan Google per pencarian.
-- Kata kunci otomatis terisi dari nama kategori yang sedang dibuka.
+1. Membaca memori di Firestore (`scans/main`) — daftar tempat yang sudah pernah dipindai.
+2. Menentukan titik pusat dari area yang kamu tulis.
+3. **Gemini memilih lokasi berikutnya** — 3 kecamatan/desa di sekitar pusat yang belum pernah
+   dicari (contoh: dari Pacet → Cipanas, Sukaresmi, Cugenang).
+4. Setiap lokasi dicari lewat `api/discover.js` (Google Places Text Search), lalu disaring:
+   hanya nomor HP Indonesia dan **hanya usaha yang belum punya website sendiri**.
+5. Semua `place id` yang dilihat + lokasi yang sudah dicari disimpan kembali ke Firestore, jadi
+   tanah yang sama tidak pernah dipindai dua kali — dari HP mana pun.
+6. Tombol **More** menjalankan putaran berikutnya; karena memori sudah bertambah, AI memilih
+   lokasi yang lebih jauh lagi.
 
-Kunci Google hanya ada di server. Setel di Vercel:
+- Nomor rumah/kantor (`021…`) tidak bisa dipakai WhatsApp — dihitung, tidak ditampilkan.
+- Tautan Instagram/WhatsApp/Linktree tetap dianggap "belum punya website" (ditandai `ig`).
+- Hanya **nomor HP Indonesia** (08…) yang bisa disimpan; nomor yang sudah pernah disimpan
+  ditandai ✓ dan tidak bisa masuk dua kali.
+- Baris atas menampilkan apa yang terjadi: `50 numbers · Cipanas, Sukaresmi · 12 with website ·
+  8 scanned before`.
+- Kalau kuota harian Google habis, baris itu menulis `Google daily limit reached` (kuota
+  kembali pada tengah malam waktu Pasifik = 14:00 WIB).
+
+Kunci dan memori hanya ada di server:
 
 ```
-GOOGLE_MAPS_API_KEY = <kunci dengan Places API (New) aktif>
+GOOGLE_MAPS_API_KEY = <kunci dengan Places API (New) aktif, dibatasi ke alamat situs ini>
+FIREBASE_PROJECT_ID = numberlisting-22048      (opsional, app juga mengirimnya)
+FIREBASE_API_KEY    = <kunci web Firebase>     (opsional)
 ```
 
-Kunci itu dibatasi ke alamat website ini (HTTP referrer), jadi setiap permintaan dari server
-dikirim dengan `Referer` aplikasi. Kalau alamat situs berubah, tambahkan alamat baru di
-pembatasan kunci.
+Aturan Firestore harus mengizinkan koleksi `scans` (tempat memori pemindaian disimpan):
 
-Hasil nyata (radius 10 km, September 2026): villa di Pacet/Cianjur **50 nomor dari 60 tempat**
-(3 permintaan), restoran di Cianjur **50 nomor dari 84 tempat** (6 permintaan), laundry di
-Cibinong **50 nomor dari 60 tempat** (3 permintaan). Sebelumnya dengan HERE hasilnya hanya
-9–19 nomor per pencarian. Google memberi **10.000 permintaan gratis per SKU per bulan**,
-jadi sekitar 1.500–3.000 pencarian gratis setiap bulan (tarif setelahnya ada di halaman
-billing Google Cloud).
+```
+match /scans/{doc} { allow read, write: if true; }
+```
 
 ## Pesan AI
 
