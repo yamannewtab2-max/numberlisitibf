@@ -466,7 +466,9 @@ function genMessage(b){
     headers:{'content-type':'application/json'},
     body:JSON.stringify({ name:b.name, category:catNameOf(b.categoryId) })
   }).then(function(r){ return r.json(); }).then(function(j){
-    if(j && typeof j.message === 'string' && j.message.trim()){
+    // only a real AI message is worth storing - a template reply means Gemini was down,
+    // so leave it unset and let the backlog try again later
+    if(j && typeof j.message === 'string' && j.message.trim() && j.source !== 'template'){
       b.msg = j.message.trim();
       b.msgv = MSG_VERSION;
       save(); cloud.push('businesses', b);
@@ -522,7 +524,7 @@ function waSend(id){
   }).then(function(r){ return r.json(); }).then(function(j){
     clearTimeout(to);
     var msg = (j && typeof j.message === 'string' && j.message.trim()) ? j.message.trim() : template(b.name, category);
-    b.msg = msg; save(); cloud.push('businesses', b);
+    if(j && j.source !== 'template'){ b.msg = msg; b.msgv = MSG_VERSION; save(); cloud.push('businesses', b); }
     moveToTrash(b);                                   // messaged -> out of the category, into Trash
     location.href = waUrl(b.phone, msg);
   }).catch(function(){
