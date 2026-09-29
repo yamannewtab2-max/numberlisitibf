@@ -96,6 +96,8 @@ h1{font-size:20px;font-weight:640;margin:0;letter-spacing:-.02em}
   box-shadow:0 -8px 40px rgba(10,20,15,.14);max-height:92vh;overflow:auto}
 .sheet.on{transform:none}
 .grab{width:38px;height:4px;border-radius:3px;background:var(--faint);margin:4px auto 14px}
+#expBtn{margin-left:auto;width:42px;height:42px;border-radius:14px;background:var(--card);color:var(--teal)}
+#expBtn:active{transform:scale(.94)}
 .sh-title{font-size:17px;font-weight:640;letter-spacing:-.02em;margin:2px 0 14px}
 .sh-label{font-size:12.5px;color:var(--teal);margin:0 0 6px 4px;font-weight:600;letter-spacing:.01em}
 .sh-input{width:100%;border:0;background:var(--card);border-radius:16px;padding:16px;font:inherit;font-size:17px;color:var(--ink);
@@ -154,6 +156,9 @@ h1{font-size:20px;font-weight:640;margin:0;letter-spacing:-.02em}
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
     </button>
     <h1 class="title" id="catName"></h1>
+    <button class="ghost exp" id="expBtn" aria-label="Export">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M8 11l4 4 4-4"/><path d="M5 19h14"/></svg>
+    </button>
   </div>
   <div class="list" id="biz"></div>
 </main>
@@ -1009,6 +1014,34 @@ function nearbyAreas(){
   out.sort(function(a, b){ return b[1] - a[1]; });
   return out.slice(0, 8);
 }
+// A bulk sender (WA Hero Sender, Wablas, ...) needs a list of name + number + the exact message.
+// Everything the app already holds goes into one CSV, one row per business, personalized text included.
+function csvCell(v){
+  var t = String(v == null ? '' : v);
+  return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+}
+function exportCat(cid){
+  var c = S.cats[cid];
+  if(!c) return;
+  var rows = [['nama','nomor','pesan']];
+  Object.keys(S.biz).forEach(function(id){
+    var b = S.biz[id];
+    if(b.categoryId !== cid) return;
+    var msg = b.msg || '';
+    if(!msg){ try{ msg = template(b.name, c.name); }catch(e){ msg = ''; } }
+    rows.push([b.name || '', normPhone(b.phone) || b.phone || '', msg]);
+  });
+  if(rows.length < 2){ toast('Nothing to export'); return; }
+  var csv = rows.map(function(r){ return r.map(csvCell).join(','); }).join('\r\n');
+  var blob = new Blob(['\ufeff' + csv], { type:'text/csv;charset=utf-8' });   // BOM: Excel reads Indonesian text
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = String(c.name || 'leads').replace(/[^\w\-]+/g, '-').toLowerCase() + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 5000);
+  buzz(10);
+  toast((rows.length - 1) + ' rows exported');
+}
 function findViewOn(){ return document.getElementById('find').classList.contains('on'); }
 function leaveFind(){ if(F.from && S.cats[F.from]) show('cat', true); else toHome(); }
 
@@ -1144,6 +1177,9 @@ function addHit(i){
   pickCategory(i);
 }
 document.getElementById('fabFind').addEventListener('click', function(){ buzz(8); findSheet(); });
+document.getElementById('expBtn').addEventListener('click', function(){
+  if(cur && cur !== TRASH && S.cats[cur]) exportCat(cur); else toast('Open a category first');
+});
 document.getElementById('findBack').addEventListener('click', function(){ buzz(8); history.back(); });
 document.getElementById('findMore').addEventListener('click', function(){ startFind(false); });
 document.getElementById('hits').addEventListener('click', function(e){
