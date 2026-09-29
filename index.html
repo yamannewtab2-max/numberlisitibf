@@ -811,37 +811,7 @@ var cloud = (function(){
   }
   window.addEventListener('online', function(){ flush(); });
 
-  return {
-    on: function(){ return on; },
-    queue: function(){ return qget().length; },
-    flush: flush,
-    push: function(col, obj){
-      var doc = (col === 'categories')
-        ? { id:obj.id, name:obj.name, createdAt:obj.createdAt }
-        : (col === 'scans')
-        ? { id:'main', blob:String(obj.blob || '') }        // one doc: which places were scanned
-        : { id:obj.id, name:obj.name, phone:obj.phone, categoryId:obj.categoryId, createdAt:obj.createdAt, movedAt:obj.movedAt || 0, msg:obj.msg || '', msgv:obj.msgv || 0 };
-      enqueue({ col:col, id:(col === 'scans' ? 'main' : obj.id), doc:doc });
-    },
-    drop: function(col, id){
-      enqueue({ col:col, id:id, del:true });
-    },
-    status: function(){ return api('/categories').then(function(){ return 'ok'; }, function(e){ return 'fail: ' + e.message; }); },
-    rev: rev, knownRev: knownRev, bump: bump, countable: countable, knownCount: knownCount,
-    pull: function(force){
-      if(!on) return Promise.resolve(false);
-      return (force ? Promise.resolve(true) : Promise.all([rev(), countable()]).then(function(x){
-        var r = x[0], n = x[1];
-        if(r == null && n == null) return true;                 // can't tell: do a full read
-        if(r !== null && r !== knownRev()) return true;         // somebody wrote (new-style app)
-        if(n !== null && n !== knownCount()) return true;       // something was added or removed
-        return false;                                           // nothing changed anywhere
-      })).then(function(changed){
-        if(!changed) return false;
-        return fullPull();
-      });
-    },
-    fullPull: function(){
+  function fullPull(){
       var cats = {}, biz = {}, order = [];
       return api('/categories').then(function(j){
         (j.documents || []).forEach(function(d){ var c = dec(d); c.id = idOf(d.name); cats[c.id] = c; order.push(c.id); });
@@ -879,7 +849,38 @@ var cloud = (function(){
         Object.keys(S.biz).forEach(function(bid){ cloud.push('businesses', S.biz[bid]); });
         return false;
       }).catch(function(){ return false; });
-    }
+  }
+
+  return {
+    on: function(){ return on; },
+    queue: function(){ return qget().length; },
+    flush: flush,
+    push: function(col, obj){
+      var doc = (col === 'categories')
+        ? { id:obj.id, name:obj.name, createdAt:obj.createdAt }
+        : (col === 'scans')
+        ? { id:'main', blob:String(obj.blob || '') }        // one doc: which places were scanned
+        : { id:obj.id, name:obj.name, phone:obj.phone, categoryId:obj.categoryId, createdAt:obj.createdAt, movedAt:obj.movedAt || 0, msg:obj.msg || '', msgv:obj.msgv || 0 };
+      enqueue({ col:col, id:(col === 'scans' ? 'main' : obj.id), doc:doc });
+    },
+    drop: function(col, id){
+      enqueue({ col:col, id:id, del:true });
+    },
+    status: function(){ return api('/categories').then(function(){ return 'ok'; }, function(e){ return 'fail: ' + e.message; }); },
+    rev: rev, knownRev: knownRev, bump: bump, countable: countable, knownCount: knownCount,
+    pull: function(force){
+      if(!on) return Promise.resolve(false);
+      return (force ? Promise.resolve(true) : Promise.all([rev(), countable()]).then(function(x){
+        var r = x[0], n = x[1];
+        if(r == null && n == null) return true;                 // can't tell: do a full read
+        if(r !== null && r !== knownRev()) return true;         // somebody wrote (new-style app)
+        if(n !== null && n !== knownCount()) return true;       // something was added or removed
+        return false;                                           // nothing changed anywhere
+      })).then(function(changed){
+        if(!changed) return false;
+        return fullPull();
+      });
+    },
   };
 })();
 
