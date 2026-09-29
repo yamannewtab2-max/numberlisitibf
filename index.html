@@ -707,6 +707,26 @@ var cloud = (function(){
 
   // Every change is queued on the device first and flushed to Firestore in order, so a
   // lead collected with no signal is not lost - it goes up on the next connection.
+  // Firestore's free tier counts every document read. Re-reading the whole list (hundreds of
+  // documents) every 20 seconds burned a day's quota in about an hour, so the app now polls ONE
+  // tiny document and only re-reads the list when something actually changed.
+  var RKEY = 'leads.rev';
+  function knownRev(){ return Number(localStorage.getItem(RKEY) || 0); }
+  function setRev(n){ try{ localStorage.setItem(RKEY, String(n)); }catch(e){} }
+  function rev(){
+    if(!on) return Promise.resolve(null);
+    return api('/meta/rev?mask.fieldPaths=n').then(function(j){
+      var f = (j && j.fields && j.fields.n) || null;
+      return f && ('integerValue' in f) ? Number(f.integerValue) : 0;
+    }, function(){ return null; });          // unreadable: pull anyway
+  }
+  function bump(){
+    if(!on) return Promise.resolve();
+    var n = Date.now();
+    return api('/meta/rev?updateMask.fieldPaths=n', { method:'PATCH', body:JSON.stringify(enc({ n:n })) })
+      .then(function(){ setRev(n); }, function(){});
+  }
+
   var QKEY = 'leads.queue';
   function qget(){ try{ return JSON.parse(localStorage.getItem(QKEY)) || []; }catch(e){ return []; } }
   function qset(a){ try{ localStorage.setItem(QKEY, JSON.stringify(a)); }catch(e){} }
@@ -730,6 +750,7 @@ var cloud = (function(){
       : api(nameOf(op.col, op.id), { method:'PATCH', body:JSON.stringify(enc(op.doc)) });
     return Promise.resolve(p).then(function(){
       var cur = qget(); cur.shift(); qset(cur); flushing = false;
+      if(!cur.length) bump();         // queue empty: one tiny write tells the other device to re-read
       syncSoon();                     // our write landed - pull what other devices did meanwhile
       return flush();
     }, function(){
@@ -754,8 +775,18 @@ var cloud = (function(){
       enqueue({ col:col, id:id, del:true });
     },
     status: function(){ return api('/categories').then(function(){ return 'ok'; }, function(e){ return 'fail: ' + e.message; }); },
-    pull: function(){
+    rev: rev, knownRev: knownRev, bump: bump,
+    pull: function(force){
       if(!on) return Promise.resolve(false);
+      return (force ? Promise.resolve(true) : rev().then(function(r){
+        if(r == null) return true;                 // unknown: fall back to a full read
+        return r !== knownRev();                   // nothing changed anywhere? then do nothing
+      })).then(function(changed){
+        if(!changed) return false;
+        return fullPull();
+      });
+    },
+    fullPull: function(){
       var cats = {}, biz = {}, order = [];
       return api('/categories').then(function(j){
         (j.documents || []).forEach(function(d){ var c = dec(d); c.id = idOf(d.name); cats[c.id] = c; order.push(c.id); });
@@ -781,6 +812,7 @@ var cloud = (function(){
           if(op.col === 'categories'){ if(!cats[op.id]) order.push(op.id); cats[op.id] = op.doc; }
           else biz[op.id] = op.doc;
         });
+        rev().then(function(r){ if(r != null) setRev(r); });   // remember where we are
         if(order.length || Object.keys(biz).length){
           order.sort(function(a, b){ return (cats[a].createdAt || 0) - (cats[b].createdAt || 0); });
           S = { cats:cats, biz:biz, order:order };
