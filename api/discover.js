@@ -34,6 +34,8 @@ const FIELDS = [
   'places.formattedAddress',
   'places.location',
   'places.websiteUri',
+  'places.rating',
+  'places.userRatingCount',
   'nextPageToken'
 ].join(',');
 const FIELDS_AREA = 'places.location,places.formattedAddress,places.displayName';
@@ -248,6 +250,12 @@ module.exports = async function handler(req, res) {
             ids.push(id);                                 // handed back so the app can remember it
             if (skip.has(id)) { again++; continue; }       // scanned in an earlier search
             scanned++;
+            // Optional quality gate: only businesses rated at least this well (5 is the maximum).
+            const minRating = Number(P.minRating) || 0;
+            const minReviews = Number(P.minReviews) || 0;
+            if (minRating && !(typeof p.rating === 'number' && p.rating >= minRating)) continue;
+            if (minReviews && !(typeof p.userRatingCount === 'number' && p.userRatingCount >= minReviews)) continue;
+
             const mobile = toMobile(p.nationalPhoneNumber || p.internationalPhoneNumber || '');
             const anyPhone = digits(p.nationalPhoneNumber || p.internationalPhoneNumber || '');
             const kind = siteKind(p.websiteUri);
@@ -260,7 +268,9 @@ module.exports = async function handler(req, res) {
                 km: kmBetween(lat, lng, p.location),
                 lat: p.location && p.location.latitude,
                 lng: p.location && p.location.longitude,
-                site: kind                       // 'none' | 'social' (never 'own' - those are skipped)
+                site: kind,                      // 'none' | 'social' (never 'own' - those are skipped)
+                rating: (typeof p.rating === 'number') ? p.rating : null,
+                reviews: (typeof p.userRatingCount === 'number') ? p.userRatingCount : null
               });
             } else if (anyPhone.length >= 7) landline++;
             else none++;
