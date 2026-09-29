@@ -811,15 +811,30 @@ var cloud = (function(){
   }
   window.addEventListener('online', function(){ flush(); });
 
+  // Read a whole collection, however long it is: follow nextPageToken until it stops.
+  function listAll(col){
+    var out = [], tok = null;
+    function step(){
+      var path = '/' + col + '?pageSize=300' + (tok ? ('&pageToken=' + encodeURIComponent(tok)) : '');
+      return api(path).then(function(j){
+        out = out.concat(j.documents || []);
+        tok = j.nextPageToken || null;
+        return tok ? step() : out;
+      });
+    }
+    return step();
+  }
+
   function fullPull(){
       var cats = {}, biz = {}, order = [];
-      return api('/categories').then(function(j){
-        (j.documents || []).forEach(function(d){ var c = dec(d); c.id = idOf(d.name); cats[c.id] = c; order.push(c.id); });
-        return api('/businesses');
-      }).then(function(k){
-        (k.documents || []).forEach(function(d){ var b = dec(d); b.id = idOf(d.name); biz[b.id] = b; });
-        return api('/scans');
+      return listAll('categories').then(function(docs){
+        (docs || []).forEach(function(d){ var c = dec(d); c.id = idOf(d.name); cats[c.id] = c; order.push(c.id); });
+        return listAll('businesses');
+      }).then(function(docs){
+        (docs || []).forEach(function(d){ var b = dec(d); b.id = idOf(d.name); biz[b.id] = b; });
+        return listAll('scans');
       }).then(function(sc){
+        sc = { documents: sc || [] };
         // the scanned-places memory, shared by every device
         (sc.documents || []).forEach(function(d){
           var s = dec(d);
