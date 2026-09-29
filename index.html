@@ -98,6 +98,8 @@ h1{font-size:20px;font-weight:640;margin:0;letter-spacing:-.02em}
 .grab{width:38px;height:4px;border-radius:3px;background:var(--faint);margin:4px auto 14px}
 #expBtn{margin-left:auto;width:42px;height:42px;border-radius:14px;background:var(--card);color:var(--teal)}
 #expBtn:active{transform:scale(.94)}
+.ico.snd{color:#fff;background:var(--teal)}
+.ico.snd:active{transform:scale(.92)}
 .sh-title{font-size:17px;font-weight:640;letter-spacing:-.02em;margin:2px 0 14px}
 .sh-label{font-size:12.5px;color:var(--teal);margin:0 0 6px 4px;font-weight:600;letter-spacing:.01em}
 .sh-input{width:100%;border:0;background:var(--card);border-radius:16px;padding:16px;font:inherit;font-size:17px;color:var(--ink);
@@ -204,6 +206,7 @@ var I = {
   trash:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>'
 };
 var WA_GLYPH = I.wa.replace('<svg ','<svg class="glyph" ');
+I.send = '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3L10.5 13.5"/><path d="M21 3l-6.8 18-3.7-7.5L3 9.8 21 3z"/></svg>';
 
 /* ---------- store ---------- */
 var KEY = 'leads.v1';
@@ -296,6 +299,7 @@ function bizRow(b, i){
   return '<div class="row" data-edit="'+b.id+'" style="animation-delay:'+Math.min((i||0)*20,220)+'ms">'+
     '<span class="grow"><span class="bname'+(isRTL(b.name)?' rtl':'')+'">'+esc(b.name)+'</span>'+
     '<span class="bphone num">'+esc(b.phone)+'</span></span>'+
+    '<button class="ico snd" data-send="'+b.id+'" aria-label="Send with WA Hero">'+I.send+I.spin+'</button>'+
     '<button class="ico wa" data-wa="'+b.id+'" aria-label="WhatsApp">'+WA_GLYPH+I.spin+'</button>'+
   '</div>';
 }
@@ -588,6 +592,31 @@ function moveToTrash(b){
   b.movedAt = Date.now();
   save(); cloud.push('businesses', b); rerender();
 }
+// Send this one lead through WA Hero instead of opening WhatsApp. Only ever runs on a press,
+// only ever sends to the number on that row, and uses the message already written for it.
+function sendViaHero(id){
+  var b = S.biz[id]; if(!b) return;
+  var c = S.cats[b.categoryId];
+  var msg = b.msg || template(b.name, c ? c.name : '');
+  buzz(12);
+  var btn = document.querySelector('[data-send="'+id+'"]');
+  if(btn) btn.classList.add('busy');
+  fetch('/api/send', {
+    method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify({ phone: b.phone, message: msg })
+  }).then(function(r){
+    return r.json().catch(function(){ return {}; }).then(function(j){ return { ok:r.ok, j:j }; });
+  }).then(function(o){
+    if(btn) btn.classList.remove('busy');
+    if(!o.ok) throw new Error((o.j && o.j.error) || 'failed');
+    moveToTrash(b);                    // it has been messaged - same as the WhatsApp tap
+    rerender();
+    toast('Sent · ' + b.name);
+  }).catch(function(e){
+    if(btn) btn.classList.remove('busy');
+    toast('Not sent: ' + e.message);
+  });
+}
 function waSend(id){
   var b = S.biz[id]; if(!b) return;
   buzz(10);
@@ -844,6 +873,8 @@ document.getElementById('cats').addEventListener('click', function(e){
   if(row && !row._lp) openCategory(row.getAttribute('data-open'));
 });
 document.getElementById('biz').addEventListener('click', function(e){
+  var sb = e.target.closest('[data-send]');
+  if(sb){ e.stopPropagation(); sendViaHero(sb.getAttribute('data-send')); return; }
   var wb = e.target.closest('[data-wa]');
   if(wb){ e.stopPropagation(); waSend(wb.getAttribute('data-wa')); return; }
   var row = e.target.closest('[data-edit]');
