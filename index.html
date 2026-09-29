@@ -755,6 +755,23 @@ var cloud = (function(){
       return f && ('integerValue' in f) ? Number(f.integerValue) : 0;
     }, function(){ return null; });          // unreadable: pull anyway
   }
+  // Counting documents costs about one read per thousand, so this is the cheap way to notice that
+  // another phone added or removed something - even a phone still running an older copy of the app,
+  // which would never update the revision document.
+  function countable(){
+    if(!on) return Promise.resolve(null);
+    var body = { structuredAggregationQuery: {
+      structuredQuery: { from: [ { collectionId: 'businesses' } ] },
+      aggregations: [ { alias: 'total', count: {} } ] } };
+    return raw('/:runAggregationQuery', { method:'POST', body: JSON.stringify(body) }).then(function(j){
+      var f = (j && j[0] && j[0].result && j[0].result.aggregateFields) || {};
+      var t = f.total || f.count || null;
+      return t && ('integerValue' in t) ? Number(t.integerValue) : null;
+    }, function(){ return null; });
+  }
+  function knownCount(){ return Number(localStorage.getItem('leads.count') || -1); }
+  function setCount(n){ try{ localStorage.setItem('leads.count', String(n)); }catch(e){} }
+
   function bump(){
     if(!on) return Promise.resolve();
     var n = Date.now();
@@ -810,12 +827,15 @@ var cloud = (function(){
       enqueue({ col:col, id:id, del:true });
     },
     status: function(){ return api('/categories').then(function(){ return 'ok'; }, function(e){ return 'fail: ' + e.message; }); },
-    rev: rev, knownRev: knownRev, bump: bump,
+    rev: rev, knownRev: knownRev, bump: bump, countable: countable, knownCount: knownCount,
     pull: function(force){
       if(!on) return Promise.resolve(false);
-      return (force ? Promise.resolve(true) : rev().then(function(r){
-        if(r == null) return true;                 // unknown: fall back to a full read
-        return r !== knownRev();                   // nothing changed anywhere? then do nothing
+      return (force ? Promise.resolve(true) : Promise.all([rev(), countable()]).then(function(x){
+        var r = x[0], n = x[1];
+        if(r == null && n == null) return true;                 // can't tell: do a full read
+        if(r !== null && r !== knownRev()) return true;         // somebody wrote (new-style app)
+        if(n !== null && n !== knownCount()) return true;       // something was added or removed
+        return false;                                           // nothing changed anywhere
       })).then(function(changed){
         if(!changed) return false;
         return fullPull();
@@ -848,6 +868,7 @@ var cloud = (function(){
           else biz[op.id] = op.doc;
         });
         rev().then(function(r){ if(r != null) setRev(r); });   // remember where we are
+        countable().then(function(n){ if(n != null) setCount(n); });
         if(order.length || Object.keys(biz).length){
           order.sort(function(a, b){ return (cats[a].createdAt || 0) - (cats[b].createdAt || 0); });
           S = { cats:cats, biz:biz, order:order };
