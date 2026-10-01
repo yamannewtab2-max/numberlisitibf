@@ -40,7 +40,8 @@ function fallback(name, category) {
   return (
     `Halo, saya dapat nomor ${who} dari Google Maps. Saya bikin website untuk ${cat} — isinya ${benefit}.\n\n` +
     `Kalau alamat website-nya pakai .com dengan nama ${who} sendiri, usaha ini terlihat lebih resmi dan mudah diingat orang.\n\n` +
-    `Soal biaya tidak perlu khawatir, semua bisa disesuaikan dengan budget Bapak/Ibu.\n\n` +
+    `Harga jualnya mulai dari 1,5 juta, desainnya bersih dan rapi, dan alamat .com dengan nama usahanya sendiri sudah termasuk gratis untuk tahun pertama.\n\n` +
+    `Soal biaya tidak perlu khawatir, semuanya masih bisa disesuaikan dengan budget Bapak/Ibu.\n\n` +
     `Kalau ada waktu sebentar, saya ingin tanya: website seperti apa yang Bapak/Ibu inginkan?`
   );
 }
@@ -60,7 +61,7 @@ Pesan harus menyentuh 4 hal ini, singkat dan mengalir:
 - Toko / barang: daftar produk, harga, pesan lewat WhatsApp, lokasi, mudah ditemukan orang di Google.
 - Kategori lain (bengkel, laundry, klinik, kursus, jasa, dll): pikirkan sendiri apa yang paling dicari calon pelanggan usaha semacam itu.
 2. ALAMAT WEBSITE SENDIRI: dorong mereka punya website dengan alamat .com memakai nama usaha mereka sendiri (contoh: namaUsahanya.com). Alasannya: terlihat resmi dan lebih dipercaya, mudah diingat orang, dan jadi milik mereka sendiri - bukan numpang di akun orang lain.
-3. HARGA: sampaikan mereka sama sekali tidak perlu khawatir soal harga, karena semuanya bisa disesuaikan dengan budget mereka.
+3. HARGA & BONUS: sebutkan harga jual mulai dari 1,5 juta. Sekaligus sebutkan dua hal ini sebagai nilai tambah: (a) desainnya bersih, rapi, dan enak dilihat; (b) alamat .com dengan nama usaha mereka sendiri sudah termasuk GRATIS untuk tahun pertama. Tetap tenangkan mereka bahwa biaya bisa disesuaikan dengan budget.
 4. PENUTUP: tanya apakah mereka punya waktu sebentar, karena kamu ingin tahu website seperti apa yang mereka inginkan.
 
 Aturan keras:
@@ -68,13 +69,13 @@ Aturan keras:
 - 4-5 kalimat pendek. Maksimal 550 karakter.
 - JANGAN menawarkan contoh, demo, atau draf terlebih dulu. Dilarang menulis "saya buatkan contohnya dulu" atau sejenisnya. Yang ditawarkan hanya obrolan singkat tentang keinginan mereka.
 - PESAN WAJIB memuat alamat ".com" yang memakai nama usaha mereka (contoh: namaUsahanya.com). Jangan sampai lupa.
-- JANGAN pakai istilah teknis, singkatan, atau bahasa asing: OTA, SEO, platform, landing page, domain, online, booking, update, dsb. Tulis maksudnya dengan kata sehari-hari ("alamat website .com", "bisa pesan langsung tanpa lewat aplikasi lain").
+- JANGAN pakai istilah teknis, singkatan, atau bahasa asing: OTA, SEO, platform, landing page, online, booking, update, dsb. Tulis maksudnya dengan kata sehari-hari ("alamat website .com", "bisa pesan langsung tanpa lewat aplikasi lain").
 - Sebut produknya "website" (kata ini sudah biasa dipakai orang Indonesia). Jangan pakai kiasan aneh seperti "tempat khusus di internet".
 - Akhiri dengan SATU pertanyaan saja, yaitu soal waktu mereka.
 - Setiap kalimat manfaat harus menyebut keuntungan untuk pelanggan atau pemiliknya, bukan sekadar kata "website profesional".
 - Sebut nama usaha sekali secara alami. Kalau namanya tidak jelas, pakai kategorinya.
 - Maksimal 1 emoji, atau tidak sama sekali. Jangan pakai tanda seru berlebihan.
-- Jangan sebut angka harga. Jangan menjanjikan hal yang tidak pasti (jumlah pelanggan, omzet). Jangan mengaku dari perusahaan tertentu, dan jangan mengaku sudah pernah menghubungi mereka.
+- Harga yang boleh disebut hanya "mulai dari 1,5 juta" dan bonus "alamat .com gratis tahun pertama". Jangan menyebut angka lain, jangan menjanjikan hal yang tidak pasti (jumlah pelanggan, omzet). Jangan mengaku dari perusahaan tertentu, dan jangan mengaku sudah pernah menghubungi mereka.
 
 Balas HANYA isi pesannya. Tanpa tanda kutip, tanpa penjelasan, tanpa judul.`;
 
@@ -82,6 +83,9 @@ Balas HANYA isi pesannya. Tanpa tanda kutip, tanpa penjelasan, tanpa judul.`;
 function passes(text) {
   const t = text.toLowerCase();
   if (!t.includes('.com')) return false;                                  // must offer their own .com
+  if (!/1[,.]?5\s*(juta|jt)/.test(t)) return false;                       // must quote the starting price
+  if (!/gratis/.test(t)) return false;                                    // must mention the free first year
+  if (!/(tahun pertama|1 tahun|satu tahun)/.test(t)) return false;
   if (/contoh(nya)?\s*(dulu|demo|tampilan|desain)|saya\s+buatkan\s+(contoh|demo|draf)/.test(t)) return false;
   if (/ota|seo|landing page|platform\b/.test(t)) return false;            // no jargon
   return text.length <= 700;

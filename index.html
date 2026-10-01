@@ -212,7 +212,7 @@ I.send = '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="cu
 /* ---------- store ---------- */
 var KEY = 'leads.v1';
 var TRASH = '__trash';   // pseudo-category for numbers already messaged
-var MSG_VERSION = 3;     // raise this whenever the prompt changes -> stored messages get rewritten
+var MSG_VERSION = 4;     // raise this whenever the prompt changes -> stored messages get rewritten
 var S = load();
 var cur = null;          // open category id
 var lastSig = '';        // last rendered state, so a background sync only redraws on real change
@@ -542,7 +542,8 @@ function template(name, category){
   var who = name || cat;
   return 'Halo, saya dapat nomor ' + who + ' dari Google Maps. Saya bikin website untuk ' + cat + ' — isinya ' + benefit + '.\n\n' +
          'Kalau alamat website-nya pakai .com dengan nama ' + who + ' sendiri, usaha ini terlihat lebih resmi dan mudah diingat orang.\n\n' +
-         'Soal biaya tidak perlu khawatir, semua bisa disesuaikan dengan budget Bapak/Ibu.\n\n' +
+         'Harga jualnya mulai dari 1,5 juta, desainnya bersih dan rapi, dan alamat .com dengan nama usahanya sendiri sudah termasuk gratis untuk tahun pertama.\n\n' +
+         'Soal biaya tidak perlu khawatir, semuanya masih bisa disesuaikan dengan budget Bapak/Ibu.\n\n' +
          'Kalau ada waktu sebentar, saya ingin tanya: website seperti apa yang Bapak/Ibu inginkan?';
 }
 /* The message is written when the number is added, not when WhatsApp is tapped - the tap
