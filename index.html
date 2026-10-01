@@ -479,6 +479,17 @@ function normPhone(raw){
   return d;
 }
 function waUrl(phone, text){ return 'https://wa.me/' + normPhone(phone) + '?text=' + encodeURIComponent(text); }
+function desktopWeb(){
+  var ua = navigator.userAgent || '';
+  return !/Android|iPhone|iPad|iPod|Mobile|Opera Mini/i.test(ua) && window.innerWidth >= 900;
+}
+function openLead(url){
+  if(desktopWeb()){
+    var w = window.open(url, '_blank', 'noopener');
+    if(w){ try{ w.opener = null; }catch(e){} return; }      // blocked by the browser: fall through
+  }
+  location.href = url;
+}
 
 /* ONE number, once — globally, even across different categories. */
 function findDup(phone, exceptId){
@@ -625,7 +636,7 @@ function waSend(id){
   // Instant path: the message was written when the number was added (and is up to date).
   if(b.msg && b.msgv === MSG_VERSION){
     moveToTrash(b);
-    location.href = waUrl(b.phone, b.msg);
+    openLead(waUrl(b.phone, b.msg));
     return;
   }
   // Outdated or missing text: write it now, once, then every later tap is instant.
@@ -646,12 +657,12 @@ function waSend(id){
     var msg = (j && typeof j.message === 'string' && j.message.trim()) ? j.message.trim() : template(b.name, category);
     if(j && j.source !== 'template'){ b.msg = msg; b.msgv = MSG_VERSION; save(); cloud.push('businesses', b); }
     moveToTrash(b);                                   // messaged -> out of the category, into Trash
-    location.href = waUrl(b.phone, msg);
+    openLead(waUrl(b.phone, msg));
   }).catch(function(){
     clearTimeout(to);
     if(btn) btn.classList.remove('busy');
     moveToTrash(b);
-    location.href = waUrl(b.phone, template(b.name, category));
+    openLead(waUrl(b.phone, template(b.name, category)));
   });
 }
 
